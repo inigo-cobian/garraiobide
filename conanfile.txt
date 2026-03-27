@@ -1,0 +1,14 @@
+[requires]
+spdlog/1.13.0
+cpr/1.10.5
+libzip/1.10.1
+nlohmann_json/3.11.3
+gtest/1.14.0
+fast-cpp-csv-parser/20191004
+
+[generators]
+CMakeDeps
+CMakeToolchain
+
+[layout]
+cmake_layout
