@@ -4,6 +4,7 @@ add_library(gtfs_core
     io/zip_reader.cpp
     io/csv_reader.cpp
     io/geojson_reader.cpp
+    io/temp_file.cpp
     gtfs/gtfs_manager.cpp
 )
 
