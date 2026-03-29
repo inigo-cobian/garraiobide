@@ -4,7 +4,7 @@
 namespace gtfs {
 
 void GtfsManager::load_feed(const std::string& zip_path) {
-    io::ZipReader zip_reader;
+    io::ZipFile zip_reader;
     zip_reader.open_file(zip_path);
 }
 

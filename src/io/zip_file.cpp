@@ -1,4 +1,4 @@
-#include "zip_reader.hpp"
+#include "zip_file.hpp"
 
 #include <iostream>
 #include <zip.h>
@@ -7,7 +7,7 @@
 
 namespace io {
 
-void ZipReader::open_file(const std::string &zip_path) {
+void ZipFile::open_file(const std::string &zip_path) {
     // TODO validate file state
     int err = 0;
     archive = zip_open(zip_path.c_str(), 0, &err);
@@ -17,7 +17,7 @@ void ZipReader::open_file(const std::string &zip_path) {
 
 }
 
-std::string ZipReader::get_file(const std::string &filename) {
+std::string ZipFile::get_file(const std::string &filename) {
     if (!archive) {
         throw std::runtime_error("Should open the zip file before working with it");
     }
@@ -49,11 +49,10 @@ std::string ZipReader::get_file(const std::string &filename) {
     throw std::runtime_error("Cannot find zip file");
 }
 
-ZipReader::~ZipReader() {
+ZipFile::~ZipFile() {
     if (archive != nullptr) {
         zip_close(archive);
     }
 }
-
 
 }

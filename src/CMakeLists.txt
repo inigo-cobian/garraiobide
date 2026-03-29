@@ -1,7 +1,7 @@
 add_library(gtfs_core
     core/logger.cpp
     io/http_client.cpp
-    io/zip_reader.cpp
+        io/zip_file.cpp
     io/csv_reader.cpp
     io/geojson_reader.cpp
     io/temp_file.cpp
