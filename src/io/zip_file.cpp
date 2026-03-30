@@ -49,7 +49,7 @@ std::string ZipFile::get_file_content(const std::string &filename) const {
         const char* name = zip_get_name(archive, i, 0);
 
         zip_file_t* file = zip_fopen_index(archive, i, 0);
-        if (!file || filename == name) {
+        if (!file || filename != name) {
             continue;
         }
 

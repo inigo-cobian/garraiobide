@@ -19,6 +19,8 @@ int main() {
 
     gtfs::GtfsManager manager;
     manager.load_feed(tmpfile.getPath());
+    std::cout << manager.get_stops() << std::endl;
+
 
     return 0;
 }
