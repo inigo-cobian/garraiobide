@@ -1,11 +1,12 @@
 #pragma once
 #include <string>
+#include <vector>
 
 namespace io {
 
 class CsvReader {
 public:
-    static void read(const std::string& file);
+    static std::vector<std::vector<std::string>> parse_file(std::string_view text, char delimiter, const std::vector<std::string>& columns);
 };
 
 }

@@ -1,11 +1,12 @@
 add_library(gtfs_core
     core/logger.cpp
     io/http_client.cpp
-        io/zip_file.cpp
+    io/zip_file.cpp
     io/csv_reader.cpp
     io/geojson_reader.cpp
     io/temp_file.cpp
     gtfs/gtfs_manager.cpp
+    gtfs/stop.cpp
 )
 
 target_include_directories(gtfs_core PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
