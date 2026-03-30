@@ -1,6 +1,5 @@
 #include "zip_file.hpp"
 
-#include <iostream>
 #include <zip.h>
 #include <stdexcept>
 #include <vector>
@@ -20,6 +19,23 @@ ZipFile::~ZipFile() {
     if (archive != nullptr) {
         zip_close(archive);
     }
+}
+
+ZipFile::ZipFile(ZipFile&& other) noexcept
+    : archive(other.archive)
+{
+    other.archive = nullptr;
+}
+
+ZipFile& ZipFile::operator=(ZipFile&& other) noexcept {
+    if (this != &other) {
+        if (archive) {
+            zip_close(archive);   // clean up current resource
+        }
+        archive = other.archive;
+        other.archive = nullptr;
+    }
+    return *this;
 }
 
 std::string ZipFile::get_file_content(const std::string &filename) const {
