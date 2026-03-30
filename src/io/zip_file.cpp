@@ -4,20 +4,25 @@
 #include <zip.h>
 #include <stdexcept>
 #include <vector>
+#include <spdlog/common.h>
 
 namespace io {
 
-void ZipFile::open_file(const std::string &zip_path) {
-    // TODO validate file state
+ZipFile::ZipFile(const std::string &zip_path) {
     int err = 0;
     archive = zip_open(zip_path.c_str(), 0, &err);
     if (!archive) {
         throw std::runtime_error("Failed to open zip file");
     }
-
 }
 
-std::string ZipFile::get_file(const std::string &filename) {
+ZipFile::~ZipFile() {
+    if (archive != nullptr) {
+        zip_close(archive);
+    }
+}
+
+std::string ZipFile::get_file_content(const std::string &filename) const {
     if (!archive) {
         throw std::runtime_error("Should open the zip file before working with it");
     }
@@ -47,12 +52,6 @@ std::string ZipFile::get_file(const std::string &filename) {
         return result;
     }
     throw std::runtime_error("Cannot find zip file");
-}
-
-ZipFile::~ZipFile() {
-    if (archive != nullptr) {
-        zip_close(archive);
-    }
 }
 
 }

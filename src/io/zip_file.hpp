@@ -4,12 +4,11 @@
 
 namespace io {
 
-// TODO rename it as Zip file and rethink it
 class ZipFile {
 public:
-    void open_file(const std::string &zip_path);
-    [[nodiscard]] std::string get_file(const std::string &filename);
+    ZipFile(const std::string &zip_path);
     ~ZipFile();
+    [[nodiscard]] std::string get_file_content(const std::string &filename) const;
 private:
     zip *archive = nullptr;
 };
