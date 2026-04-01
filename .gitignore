@@ -88,3 +88,6 @@ graph_info.json
 .conanrunner/
 .conanrc
 conan_provider.cmake
+
+# IntelliJ
+.idea
