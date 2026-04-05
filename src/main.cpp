@@ -30,5 +30,10 @@ int main() {
         std::cout << agency.get_name() << std::endl;
     }
 
+    auto routes = manager.get_routes();
+    for (const auto& route : routes) {
+        std::cout << route.get_name() << std::endl;
+    }
+
     return 0;
 }

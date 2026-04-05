@@ -1,5 +1,6 @@
 #include "gtfs_manager.hpp"
 
+#include <ranges>
 #include "io/csv_reader.hpp"
 
 namespace gtfs {
@@ -35,4 +36,19 @@ std::vector<Agency> GtfsManager::get_agencies() const {
     }
     return agencies;
 }
+
+std::vector<Route> GtfsManager::get_routes() const {
+    auto csv = feeds.at(0).get_file_content("routes.txt");
+    std::vector<std::string> columns = {"route_id", "route_short_name", "route_long_name", "route_type", "route_color", "route_text_color"};
+    auto result = io::CsvReader::parse_file(csv, ',', columns);
+
+    std::vector<Route> routes;
+    for (auto line : result) {
+        std::string name = line.at(2).empty() ? line.at(1) : line.at(2);
+        auto route = Route(line.at(0), name, line.at(3), line.at(4), line.at(5));
+        routes.push_back(route);
+    }
+    return routes;
+}
+
 }
