@@ -16,13 +16,11 @@ std::vector<std::vector<std::string>> CsvReader::parse_file(std::string_view tex
         return std::string_view(line.begin(), line.end());
     });
 
-    std::vector<std::vector<std::string>> result;
-    std::map<int, std::string> pos_col;
-
     auto headers = rows.front() | std::views::split(delimiter) | std::views::transform([](auto header) {
         return std::string_view(header.begin(), header.end());
     });
     int header_pos = 0;
+    std::map<int, std::string> pos_col;
     for (const auto &header : headers) {
         if (std::ranges::contains(columns, header,
             [](const std::string& s) -> std::string_view {
@@ -33,10 +31,9 @@ std::vector<std::vector<std::string>> CsvReader::parse_file(std::string_view tex
         header_pos++;
     }
 
+    std::vector<std::vector<std::string>> result;
     for (auto line : rows) {
         if (line.empty()) continue;
-
-        // Split the line into fields using the delimiter
         auto fields = line | std::views::split(delimiter) | std::views::transform([](auto part) {
             return std::string(part.begin(), part.end());
         });

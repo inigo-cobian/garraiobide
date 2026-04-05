@@ -1,8 +1,27 @@
 #include "stop.hpp"
 
+#include <utility>
+
 namespace gtfs {
 
 Stop::Stop(std::string id, std::string name, float latitude, float longitude)
-: id(id), name(name), latitude(latitude), longitude(longitude) {}
+    : id(std::move(id)), name(std::move(name)), point(latitude, longitude) {}
+
+Stop::Stop(std::string id, std::string name, OGRPoint point)
+        : id(std::move(id)), name(std::move(name)), point(std::move(point)) {
+}
+
+[[nodiscard]] std::string Stop::getId() const {
+    return id;
+}
+
+[[nodiscard]] std::string Stop::getName() const {
+    return name;
+}
+
+[[nodiscard]] OGRPoint Stop::getPoint() const {
+    return point;
+}
 
 }
+

@@ -11,7 +11,7 @@ void GtfsManager::load_feed(const std::string& zip_path) {
 std::vector<Stop> GtfsManager::get_stops() const {
     // TODO manage n feeds
     auto csv = feeds.at(0).get_file_content("stops.txt");
-    std::vector<std::string> columns = {"stop_id", "stop_name", "stop_lat", "stop_lon"};
+    std::vector<std::string> columns = {"stop_id", "stop_name", "stop_lat", "stop_lon", "location_type", "parent_station"};
     auto result = io::CsvReader::parse_file(csv, ',', columns);
 
     std::vector<Stop> stops;

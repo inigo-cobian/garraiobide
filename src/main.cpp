@@ -20,8 +20,10 @@ int main() {
     gtfs::GtfsManager manager;
     manager.load_feed(tmpfile.getPath());
     auto stops = manager.get_stops();
-    //std::cout << manager.get_stops() << std::endl;
 
+    for (const auto& stop : stops) {
+        std::cout << stop.getName() << std::endl;
+    }
 
     return 0;
 }
