@@ -1,8 +1,10 @@
 #include "route.hpp"
 
+#include <utility>
+
 namespace gtfs {
-Route::Route(const std::string& id, const std::string& name, const std::string& type, const std::string& color, const std::string& textColor)
-    : id(id), name(name), type(type), color(color), textColor(textColor) {}
+Route::Route(std::string  id, std::string  name, std::string  type, std::string  color, std::string  textColor)
+    : id(std::move(id)), name(std::move(name)), type(std::move(type)), color(std::move(color)), textColor(std::move(textColor)) {}
 
 [[nodiscard]] const std::string&  Route::get_id() const {
   return id;
