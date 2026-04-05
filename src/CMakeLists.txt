@@ -8,6 +8,7 @@ add_library(garraiobide_core
     gtfs/gtfs_manager.cpp
     gtfs/stop.cpp
     gtfs/agency.cpp
+    gtfs/route.cpp
 )
 
 target_include_directories(garraiobide_core PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
