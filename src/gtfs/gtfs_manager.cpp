@@ -23,9 +23,16 @@ std::vector<Stop> GtfsManager::get_stops() const {
     return stops;
 }
 
-std::vector<Agency> GtfsManager::get_agency() const {
-    auto a = feeds.at(0).get_file_content("agency.txt");
-    // TODO
-    return {};
+std::vector<Agency> GtfsManager::get_agencies() const {
+    auto csv = feeds.at(0).get_file_content("agency.txt");
+    std::vector<std::string> columns = {"agency_id", "agency_name"};
+    auto result = io::CsvReader::parse_file(csv, ',', columns);
+
+    std::vector<Agency> agencies;
+    for (auto line : result) {
+        auto agency = Agency(line.at(0), line.at(1));
+        agencies.push_back(agency);
+    }
+    return agencies;
 }
 }

@@ -25,5 +25,10 @@ int main() {
         std::cout << stop.get_name() << std::endl;
     }
 
+    auto agencies = manager.get_agencies();
+    for (const auto& agency : agencies) {
+        std::cout << agency.get_name() << std::endl;
+    }
+
     return 0;
 }

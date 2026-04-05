@@ -13,7 +13,7 @@ class GtfsManager {
 public:
     void load_feed(const std::string &zip_path);
     [[nodiscard]] std::vector<Stop> get_stops() const;
-    [[nodiscard]] std::vector<Agency> get_agency() const;
+    [[nodiscard]] std::vector<Agency> get_agencies() const;
 private:
     std::vector<io::ZipFile> feeds;
 };
