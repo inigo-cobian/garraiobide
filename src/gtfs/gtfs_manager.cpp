@@ -5,7 +5,7 @@
 namespace gtfs {
 
 void GtfsManager::load_feed(const std::string& zip_path) {
-    feeds.push_back(io::ZipFile(zip_path));
+    feeds.emplace_back(zip_path);
 }
 
 std::vector<Stop> GtfsManager::get_stops() const {
