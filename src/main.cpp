@@ -22,7 +22,7 @@ int main() {
     auto stops = manager.get_stops();
 
     for (const auto& stop : stops) {
-        std::cout << stop.getName() << std::endl;
+        std::cout << stop.get_name() << std::endl;
     }
 
     return 0;

@@ -13,9 +13,9 @@ private:
 public:
     explicit Stop(std::string id, std::string name, float latitude, float longitude);
     explicit Stop(std::string id, std::string name, OGRPoint point);
-    [[nodiscard]] std::string getId() const;
-    [[nodiscard]] std::string getName() const;
-    [[nodiscard]] OGRPoint getPoint() const;
+    [[nodiscard]] std::string get_id() const;
+    [[nodiscard]] std::string get_name() const;
+    [[nodiscard]] OGRPoint get_point() const;
 };
 
 }
