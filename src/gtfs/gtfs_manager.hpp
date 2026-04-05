@@ -3,7 +3,7 @@
 #include <vector>
 #include "io/zip_file.hpp"
 
-
+#include "agency.hpp"
 #include "stop.hpp"
 
 namespace gtfs {
@@ -13,7 +13,7 @@ class GtfsManager {
 public:
     void load_feed(const std::string &zip_path);
     [[nodiscard]] std::vector<Stop> get_stops() const;
-    [[nodiscard]] std::string get_agency();
+    [[nodiscard]] std::vector<Agency> get_agency() const;
 private:
     std::vector<io::ZipFile> feeds;
 };

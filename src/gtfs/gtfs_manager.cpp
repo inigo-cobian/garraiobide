@@ -23,7 +23,9 @@ std::vector<Stop> GtfsManager::get_stops() const {
     return stops;
 }
 
-std::string GtfsManager::get_agency() {
-    return feeds.at(0).get_file_content("agency.txt");
+std::vector<Agency> GtfsManager::get_agency() const {
+    auto a = feeds.at(0).get_file_content("agency.txt");
+    // TODO
+    return {};
 }
 }
