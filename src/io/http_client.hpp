@@ -2,10 +2,8 @@
 #include <string>
 
 namespace io {
-
-class HttpClient {
-public:
-    static std::string download(const std::string& url);
-};
-
+    class HttpClient {
+    public:
+        static std::string download(const std::string &url);
+    };
 }

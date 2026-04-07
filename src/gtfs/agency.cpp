@@ -3,15 +3,14 @@
 #include <utility>
 
 namespace gtfs {
+    Agency::Agency(std::string id, std::string name) : id(std::move(id)), name(std::move(name)) {
+    }
 
-Agency::Agency(std::string id, std::string name) : id(std::move(id)), name(std::move(name)) {}
+    [[nodiscard]] std::string Agency::get_id() const {
+        return id;
+    }
 
-[[nodiscard]] std::string Agency::get_id() const {
-  return id;
-}
-
-[[nodiscard]] std::string Agency::get_name() const {
-  return name;
-}
-
+    [[nodiscard]] std::string Agency::get_name() const {
+        return name;
+    }
 }

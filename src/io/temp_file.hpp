@@ -3,16 +3,15 @@
 #include <fstream>
 
 namespace io {
+    class TempFile {
+    public:
+        TempFile(const std::string &path, const std::string &extension);
 
-class TempFile {
-public:
-  TempFile(const std::string& path, const std::string& extension);
-  ~TempFile();
+        ~TempFile();
 
-  std::filesystem::path getPath();
+        std::filesystem::path getPath();
 
-private:
-  std::filesystem::path path_;
-};
-
+    private:
+        std::filesystem::path path_;
+    };
 }
