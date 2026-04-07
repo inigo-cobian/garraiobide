@@ -35,32 +35,33 @@ std::unordered_map<std::string, size_t> build_header_map(const std::vector<std::
     return map;
 }
 
-std::vector<int> map_requested_columns(const std::vector<std::string>& columns,
+std::vector<std::pair<int, std::string>> map_requested_columns(const std::vector<std::string>& columns,
                                        const std::unordered_map<std::string, size_t>& header_map) {
-    std::vector<int> indices;
-    indices.reserve(columns.size());
+    std::vector<std::pair<int, std::string>> index_name_pairs;
+    index_name_pairs.reserve(columns.size());
     for (const auto& col : columns) {
         auto it = header_map.find(col);
-        indices.push_back(it != header_map.end() ? static_cast<int>(it->second) : -1);
+        int idx = (it != header_map.end()) ? static_cast<int>(it->second) : -1;
+        index_name_pairs.emplace_back(idx, col);
     }
-    return indices;
+    return index_name_pairs;
 }
 
-std::vector<std::string> select_fields(const std::vector<std::string>& row_fields,
-                                       const std::vector<int>& column_indices) {
-    std::vector<std::string> selected;
-    selected.reserve(column_indices.size());
-    for (int idx : column_indices) {
+std::unordered_map<std::string, std::string> select_fields(const std::vector<std::string>& row_fields,
+                                       const std::vector<std::pair<int, std::string>>& column_info) {
+    std::unordered_map<std::string, std::string> row_map;
+    row_map.reserve(column_info.size());
+    for (const auto& [idx, col_name] : column_info) {
         if (idx >= 0 && static_cast<size_t>(idx) < row_fields.size()) {
-            selected.push_back(row_fields[static_cast<size_t>(idx)]);
+            row_map[col_name] = row_fields[static_cast<size_t>(idx)];
         } else {
-            selected.emplace_back(); // empty string for missing column
+            row_map[col_name] = ""; // empty string for missing column
         }
     }
-    return selected;
+    return row_map;
 }
 
-std::vector<std::vector<std::string>> CsvReader::parse_file(std::string_view text, char delimiter,
+std::vector<std::unordered_map<std::string, std::string>> CsvReader::parse_file(std::string_view text, char delimiter,
                                                                 const std::vector<std::string> &columns)
 {
     auto lines = split_lines(text);
@@ -73,9 +74,9 @@ std::vector<std::vector<std::string>> CsvReader::parse_file(std::string_view tex
     std::string_view header_line = *it;
     auto header_fields = split_fields(header_line, delimiter);
     auto header_map = build_header_map(header_fields);
-    auto column_indices = map_requested_columns(columns, header_map);
+    auto column_info = map_requested_columns(columns, header_map);
 
-    std::vector<std::vector<std::string>> result;
+    std::vector<std::unordered_map<std::string, std::string>> result;
     for (++it; it != lines.end(); ++it) {
         std::string_view line = *it;
         if (line.empty()) {
@@ -83,9 +84,10 @@ std::vector<std::vector<std::string>> CsvReader::parse_file(std::string_view tex
         }
 
         auto row_fields = split_fields(line, delimiter);
-        auto selected_row = select_fields(row_fields, column_indices);
+        auto selected_row = select_fields(row_fields, column_info);
         result.push_back(std::move(selected_row));
     }
-    return result;}
+    return result;
+}
 
 }

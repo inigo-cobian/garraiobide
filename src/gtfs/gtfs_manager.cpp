@@ -17,7 +17,7 @@ std::vector<Stop> GtfsManager::get_stops() const {
 
     std::vector<Stop> stops;
     for (auto line : result) {
-        auto stop = Stop(line.at(0), line.at(1), std::stof(line.at(2)), std::stof(line.at(3)));
+        auto stop = Stop(line.at("stop_id"), line.at("stop_name"), std::stof(line.at("stop_lat")), std::stof(line.at("stop_lon")));
         stops.push_back(stop);
     }
 
@@ -31,7 +31,7 @@ std::vector<Agency> GtfsManager::get_agencies() const {
 
     std::vector<Agency> agencies;
     for (auto line : result) {
-        auto agency = Agency(line.at(0), line.at(1));
+        auto agency = Agency(line.at("agency_id"), line.at("agency_name"));
         agencies.push_back(agency);
     }
     return agencies;
@@ -44,8 +44,8 @@ std::vector<Route> GtfsManager::get_routes() const {
 
     std::vector<Route> routes;
     for (auto line : result) {
-        std::string name = line.at(2).empty() ? line.at(1) : line.at(2);
-        auto route = Route(line.at(0), name, line.at(3), line.at(4), line.at(5));
+        std::string name = line.at("route_long_name").empty() ? line.at("route_short_name") : line.at("route_long_name");
+        auto route = Route(line.at("route_id"), name, line.at("route_type"), line.at("route_color"), line.at("route_text_color"));
         routes.push_back(route);
     }
     return routes;
