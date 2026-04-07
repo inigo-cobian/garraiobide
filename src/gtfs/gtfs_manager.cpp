@@ -1,5 +1,6 @@
 #include "gtfs_manager.hpp"
 
+#include <charconv>
 #include <ranges>
 #include "io/csv_reader.hpp"
 #include "gtfs_fields.hpp"
@@ -20,8 +21,19 @@ namespace gtfs {
 
         std::vector<Stop> stops;
         for (auto line: result) {
-            auto stop = Stop(line.at(fields::stops::ID), line.at(fields::stops::NAME),
-                             std::stof(line.at(fields::stops::LATITUDE)), std::stof(line.at(fields::stops::LONGITUDE)));
+            OGRPoint point;
+            if (!line.at(fields::stops::LATITUDE).empty() && !line.at(fields::stops::LONGITUDE).empty()) {
+                point = OGRPoint(std::stof(line.at(fields::stops::LATITUDE)),
+                                 std::stof(line.at(fields::stops::LONGITUDE)));
+            }
+            auto type = line.at(fields::stops::TYPE).empty()
+                            ? LocationType::Stop
+                            : static_cast<LocationType>(atoi(fields::stops::TYPE.c_str()));
+            auto parentId = line.at(fields::stops::PARENT).empty()
+                                ? std::nullopt
+                                : std::make_optional(line.at(fields::stops::PARENT));
+
+            auto stop = Stop(line.at(fields::stops::ID), line.at(fields::stops::NAME), point, type, parentId);
             stops.push_back(stop);
         }
 
