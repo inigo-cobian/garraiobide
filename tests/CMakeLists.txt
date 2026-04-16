@@ -1,4 +1,5 @@
 find_package(GTest REQUIRED)
+find_package(Qt6 REQUIRED COMPONENTS Core Widgets Gui Network)
 
 add_executable(gtfs_tests
     gtfs_test.cpp

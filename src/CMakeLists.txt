@@ -19,6 +19,7 @@ find_package(libzip REQUIRED)
 find_package(nlohmann_json REQUIRED)
 find_package(fast-cpp-csv-parser REQUIRED)
 find_package(GDAL REQUIRED)
+find_package(Qt6 REQUIRED COMPONENTS Core Widgets Gui Network)
 
 target_link_libraries(garraiobide_core
     PUBLIC
@@ -27,7 +28,18 @@ target_link_libraries(garraiobide_core
     libzip::zip
     nlohmann_json::nlohmann_json
     GDAL::GDAL
+    Qt6::Core
+    Qt6::Widgets
+    Qt6::Gui
+    Qt6::Network
+    QGeoView
 )
 
 add_executable(garraiobide_app main.cpp)
 target_link_libraries(garraiobide_app PRIVATE garraiobide_core)
+
+set_target_properties(garraiobide_app PROPERTIES
+        AUTOMOC ON
+        AUTOUIC ON
+        AUTORCC ON
+)
