@@ -33,7 +33,7 @@ namespace gtfs {
             auto type = line.at(fields::stops::TYPE).empty()
                             ? LocationType::Stop
                             // FIXME
-                            : LocationType::Entrance;//static_cast<LocationType>(std::stoi(fields::stops::TYPE));
+                            : LocationType::Entrance; //static_cast<LocationType>(std::stoi(fields::stops::TYPE));
             auto parentId = line.at(fields::stops::PARENT).empty()
                                 ? std::nullopt
                                 : std::make_optional(line.at(fields::stops::PARENT));
@@ -47,7 +47,7 @@ namespace gtfs {
 
     std::vector<Agency> GtfsManager::get_agencies() const {
         auto csv = feeds.at(0).get_file_content("agency.txt");
-        std::vector<std::string> columns = {fields::agency::ID, fields::agency::NAME};
+        std::vector columns = {fields::agency::ID, fields::agency::NAME};
         auto result = io::CsvReader::parse_file(csv, ',', columns);
 
         std::vector<Agency> agencies;
@@ -60,8 +60,9 @@ namespace gtfs {
 
     std::vector<Route> GtfsManager::get_routes() const {
         auto csv = feeds.at(0).get_file_content("routes.txt");
-        std::vector<std::string> columns = {
-            "route_id", "route_short_name", "route_long_name", "route_type", "route_color", "route_text_color"
+        std::vector columns = {
+            fields::routes::ID, fields::routes::SHORT_NAME, fields::routes::LONG_NAME, fields::routes::TYPE,
+            fields::routes::COLOR, fields::routes::TEXT_COLOR
         };
         auto result = io::CsvReader::parse_file(csv, ',', columns);
 
@@ -79,38 +80,37 @@ namespace gtfs {
 
     std::vector<Shape> GtfsManager::get_shapes() const {
         auto csv = feeds.at(0).get_file_content("shapes.txt");
-        std::vector<std::string> columns = {
+        std::vector columns = {
             fields::shapes::ID, fields::shapes::LATITUDE, fields::shapes::LONGITUDE, fields::shapes::SEQUENCE
         };
         auto result = io::CsvReader::parse_file(csv, ',', columns);
 
-        std::map<std::string, std::vector<std::pair<int, OGRPoint>>> shapes_map;
+        std::map<std::string, std::vector<std::pair<int, OGRPoint> > > shapes_map;
         for (auto row: result) {
-            std::string shape_id = row.at(fields::shapes::ID);
-            int sequence = atoi(row.at(fields::shapes::SEQUENCE).c_str());
-            double lat = std::stod(row.at(fields::shapes::LATITUDE));
-            double lon = std::stod(row.at(fields::shapes::LONGITUDE));
+            const std::string shape_id = row.at(fields::shapes::ID);
+            const int sequence = atoi(row.at(fields::shapes::SEQUENCE).c_str());
+            const double lat = std::stod(row.at(fields::shapes::LATITUDE));
+            const double lon = std::stod(row.at(fields::shapes::LONGITUDE));
 
-            // OGRPoint expects (longitude, latitude)
             OGRPoint point(lon, lat);
             shapes_map[shape_id].emplace_back(sequence, point);
         }
 
         std::vector<Shape> shapes;
-        for (auto& [shape_id, points_with_seq] : shapes_map) {
-            // Sort by sequence (ascending)
-            std::sort(points_with_seq.begin(), points_with_seq.end(),
-                      [](const auto& a, const auto& b) { return a.first < b.first; });
+        for (auto &[shape_id, points_with_seq]: shapes_map) {
+            std::ranges::sort(points_with_seq,
+                              [](const auto &a, const auto &b) { return a.first < b.first; });
 
-            // Extract just the ordered points
             std::vector<OGRPoint> ordered_points;
             ordered_points.reserve(points_with_seq.size());
-            for (auto& [seq, pt] : points_with_seq) {
+            for (auto &[seq, pt]: points_with_seq) {
                 ordered_points.push_back(pt);
             }
-            OGRLineString line; for (auto& pt : ordered_points) line.addPoint(&pt);
-            Shape shape(shape_id, line);
-            shapes.push_back(shape);
+            OGRLineString line;
+            for (auto &pt: ordered_points) {
+                line.addPoint(&pt);
+            }
+            shapes.push_back(Shape(shape_id, line));
         }
         return shapes;
     }
