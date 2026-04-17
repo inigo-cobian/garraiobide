@@ -9,6 +9,8 @@ namespace gtfs {
     public:
         Shape(std::string code, OGRLineString line);
 
+        [[nodiscard]] std::string get_code() const;
+
         [[nodiscard]] OGRLineString get_line() const;
     };
 }
