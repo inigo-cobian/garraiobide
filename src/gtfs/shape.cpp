@@ -1,10 +1,12 @@
 #include "shape.hpp"
 
+#include <utility>
+
 namespace gtfs {
 
-Shape::Shape(std::string code, OGRLineString line) : code(code), line(std::move(line)) {}
+Shape::Shape(std::string code, OGRLineString line) : code(std::move(code)), line(std::move(line)) {}
 
-OGRLineString Shape::get_line() const {
+[[nodiscard]] OGRLineString Shape::get_line() const {
     return line;
 }
 
