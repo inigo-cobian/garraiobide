@@ -24,4 +24,11 @@ namespace gtfs::fields {
                 COLOR = "route_color",
                 TEXT_COLOR = "route_text_color";
     }
+
+    namespace shapes {
+        static const std::string ID = "shape_id",
+                LATITUDE = "shape_pt_lat",
+                LONGITUDE = "shape_pt_lon",
+                SEQUENCE = "shape_pt_sequence";
+    }
 }

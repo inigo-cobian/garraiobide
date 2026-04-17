@@ -35,5 +35,11 @@ int main() {
         std::cout << route.get_name() << std::endl;
     }
 
+    auto shapes = manager.get_shapes();
+    for (const auto& shape : shapes) {
+        auto s = shape.get_line().exportToWkt();
+        std::cout << s << std::endl;
+    }
+
     return 0;
 }

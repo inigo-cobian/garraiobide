@@ -6,6 +6,7 @@
 #include "agency.hpp"
 #include "route.hpp"
 #include "stop.hpp"
+#include "shape.hpp"
 
 namespace gtfs {
     class GtfsManager {
@@ -17,6 +18,8 @@ namespace gtfs {
         [[nodiscard]] std::vector<Agency> get_agencies() const;
 
         [[nodiscard]] std::vector<Route> get_routes() const;
+
+        [[nodiscard]] std::vector<Shape> get_shapes() const;
 
     private:
         std::vector<io::ZipFile> feeds;

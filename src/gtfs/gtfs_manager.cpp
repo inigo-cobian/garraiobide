@@ -1,7 +1,11 @@
 #include "gtfs_manager.hpp"
 
-#include <charconv>
+#include <algorithm>
 #include <ranges>
+#include <ogr_geometry.h>
+
+#include <bits/ranges_algo.h>
+
 #include "io/csv_reader.hpp"
 #include "gtfs_fields.hpp"
 
@@ -28,7 +32,8 @@ namespace gtfs {
             }
             auto type = line.at(fields::stops::TYPE).empty()
                             ? LocationType::Stop
-                            : static_cast<LocationType>(atoi(fields::stops::TYPE.c_str()));
+                            // FIXME
+                            : LocationType::Entrance;//static_cast<LocationType>(std::stoi(fields::stops::TYPE));
             auto parentId = line.at(fields::stops::PARENT).empty()
                                 ? std::nullopt
                                 : std::make_optional(line.at(fields::stops::PARENT));
@@ -70,5 +75,43 @@ namespace gtfs {
             routes.push_back(route);
         }
         return routes;
+    }
+
+    std::vector<Shape> GtfsManager::get_shapes() const {
+        auto csv = feeds.at(0).get_file_content("shapes.txt");
+        std::vector<std::string> columns = {
+            fields::shapes::ID, fields::shapes::LATITUDE, fields::shapes::LONGITUDE, fields::shapes::SEQUENCE
+        };
+        auto result = io::CsvReader::parse_file(csv, ',', columns);
+
+        std::map<std::string, std::vector<std::pair<int, OGRPoint>>> shapes_map;
+        for (auto row: result) {
+            std::string shape_id = row.at(fields::shapes::ID);
+            int sequence = atoi(row.at(fields::shapes::SEQUENCE).c_str());
+            double lat = std::stod(row.at(fields::shapes::LATITUDE));
+            double lon = std::stod(row.at(fields::shapes::LONGITUDE));
+
+            // OGRPoint expects (longitude, latitude)
+            OGRPoint point(lon, lat);
+            shapes_map[shape_id].emplace_back(sequence, point);
+        }
+
+        std::vector<Shape> shapes;
+        for (auto& [shape_id, points_with_seq] : shapes_map) {
+            // Sort by sequence (ascending)
+            std::sort(points_with_seq.begin(), points_with_seq.end(),
+                      [](const auto& a, const auto& b) { return a.first < b.first; });
+
+            // Extract just the ordered points
+            std::vector<OGRPoint> ordered_points;
+            ordered_points.reserve(points_with_seq.size());
+            for (auto& [seq, pt] : points_with_seq) {
+                ordered_points.push_back(pt);
+            }
+            OGRLineString line; for (auto& pt : ordered_points) line.addPoint(&pt);
+            Shape shape(shape_id, line);
+            shapes.push_back(shape);
+        }
+        return shapes;
     }
 }
