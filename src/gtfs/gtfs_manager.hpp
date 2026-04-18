@@ -19,7 +19,7 @@ namespace gtfs {
 
         [[nodiscard]] std::vector<Route> get_routes() const;
 
-        [[nodiscard]] std::vector<Shape> get_shapes() const;
+        [[nodiscard]] std::optional<std::vector<Shape>> get_shapes() const;
 
     private:
         std::vector<io::ZipFile> feeds;

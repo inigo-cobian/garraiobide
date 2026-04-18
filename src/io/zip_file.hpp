@@ -1,8 +1,12 @@
 #pragma once
+#include <expected>
+#include <optional>
 #include <string>
 #include <zip.h>
 
 namespace io {
+    enum class ExtractError { FileNotFound, ParseError, FileNotOpen };
+
     class ZipFile {
     public:
         ZipFile(const std::string &zip_path);
@@ -17,8 +21,7 @@ namespace io {
 
         ZipFile &operator=(const ZipFile &) = delete;
 
-        [[nodiscard]] std::string get_file_content(const std::string &filename) const;
-
+        [[nodiscard]] std::expected<std::string, ExtractError> get_file_content(const std::string &filename) const;
     private:
         zip *archive = nullptr;
     };

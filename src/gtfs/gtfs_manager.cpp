@@ -16,7 +16,11 @@ namespace gtfs {
 
     std::vector<Stop> GtfsManager::get_stops() const {
         // TODO manage n feeds
-        auto csv = feeds.at(0).get_file_content("stops.txt");
+        auto content = feeds.at(0).get_file_content("stops.txt");
+        if (!content.has_value()) {
+            // TODO throw error
+        }
+        auto csv = content.value();
         std::vector columns = {
             fields::stops::ID, fields::stops::NAME, fields::stops::LATITUDE, fields::stops::LONGITUDE,
             fields::stops::TYPE, fields::stops::PARENT
@@ -46,7 +50,11 @@ namespace gtfs {
     }
 
     std::vector<Agency> GtfsManager::get_agencies() const {
-        auto csv = feeds.at(0).get_file_content("agency.txt");
+        auto content = feeds.at(0).get_file_content("agency.txt");
+        if (!content.has_value()) {
+            // TODO throw error
+        }
+        auto csv = content.value();
         std::vector columns = {fields::agency::ID, fields::agency::NAME};
         auto result = io::CsvReader::parse_file(csv, ',', columns);
 
@@ -59,7 +67,11 @@ namespace gtfs {
     }
 
     std::vector<Route> GtfsManager::get_routes() const {
-        auto csv = feeds.at(0).get_file_content("routes.txt");
+        auto content = feeds.at(0).get_file_content("routes.txt");
+        if (!content.has_value()) {
+            // TODO throw error
+        }
+        auto csv = content.value();
         std::vector columns = {
             fields::routes::ID, fields::routes::SHORT_NAME, fields::routes::LONG_NAME, fields::routes::TYPE,
             fields::routes::COLOR, fields::routes::TEXT_COLOR
@@ -78,8 +90,16 @@ namespace gtfs {
         return routes;
     }
 
-    std::vector<Shape> GtfsManager::get_shapes() const {
-        auto csv = feeds.at(0).get_file_content("shapes.txt");
+    std::optional<std::vector<Shape> > GtfsManager::get_shapes() const {
+        auto content = feeds.at(0).get_file_content("shapes.txt");
+        if (!content.has_value()) {
+            // TODO throw error
+            return std::nullopt;
+        }
+        auto csv = content.value();
+        if (csv.empty()) {
+            return std::nullopt;
+        }
         std::vector columns = {
             fields::shapes::ID, fields::shapes::LATITUDE, fields::shapes::LONGITUDE, fields::shapes::SEQUENCE
         };
@@ -112,6 +132,6 @@ namespace gtfs {
             }
             shapes.push_back(Shape(shape_id, line));
         }
-        return shapes;
+        return std::make_optional(shapes);
     }
 }

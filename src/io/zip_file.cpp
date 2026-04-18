@@ -1,5 +1,6 @@
 #include "zip_file.hpp"
 
+#include <expected>
 #include <zip.h>
 #include <stdexcept>
 #include <vector>
@@ -36,9 +37,10 @@ namespace io {
         return *this;
     }
 
-    std::string ZipFile::get_file_content(const std::string &filename) const {
+    std::expected<std::string, ExtractError> ZipFile::get_file_content(const std::string &filename) const {
         if (!archive) {
-            throw std::runtime_error("Should open the zip file before working with it");
+            return std::unexpected(ExtractError::FileNotOpen);
+            // TODO log Should open the zip file before working with it
         }
 
         zip_int64_t num_entries = zip_get_num_entries(archive, 0);
@@ -63,6 +65,7 @@ namespace io {
             zip_fclose(file);
             return result;
         }
-        throw std::runtime_error("Cannot find zip file");
+        // TODO log Cannot find zip file
+        return std::unexpected(ExtractError::FileNotFound);
     }
 }

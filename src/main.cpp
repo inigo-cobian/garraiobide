@@ -11,11 +11,14 @@ int main() {
 
     std::string metroBilbaoGtfsUrl = "https://cms.metrobilbao.eus/get/open_data/horarios/eu";
     auto metroBilbaoGtfs = io::HttpClient::download(metroBilbaoGtfsUrl);
+    std::string renfeMdBilbaoGtfsUrl = "https://opendata.euskadi.eus/transport/moveuskadi/renfe_media/gtfs_renfe_media.zip";
+    auto renfeMdBilbaoGtfs = io::HttpClient::download(renfeMdBilbaoGtfsUrl);
+
     auto tmpfile = io::TempFile("tmp", ".zip");
 
     std::ofstream out(tmpfile.getPath());
 
-    out << metroBilbaoGtfs;
+    out << renfeMdBilbaoGtfs;
 
     gtfs::GtfsManager manager;
     manager.load_feed(tmpfile.getPath());
@@ -36,7 +39,10 @@ int main() {
     }
 
     auto shapes = manager.get_shapes();
-    for (const auto& shape : shapes) {
+    if (!shapes.has_value()) {
+        return 0;
+    }
+    for (const auto& shape : shapes.value()) {
         auto s = shape.get_line().exportToWkt();
         std::cout << s << std::endl;
     }
