@@ -8,6 +8,7 @@
 
 #include "io/csv_reader.hpp"
 #include "gtfs_fields.hpp"
+#include "gtfs_files.hpp"
 
 namespace gtfs {
     void GtfsManager::load_feed(const std::string &zip_path) {
@@ -16,7 +17,7 @@ namespace gtfs {
 
     std::vector<Stop> GtfsManager::get_stops() const {
         // TODO manage n feeds
-        auto content = feeds.at(0).get_file_content("stops.txt");
+        auto content = feeds.at(0).get_file_content(files::STOPS);
         if (!content.has_value()) {
             // TODO throw error
         }
@@ -50,7 +51,7 @@ namespace gtfs {
     }
 
     std::vector<Agency> GtfsManager::get_agencies() const {
-        auto content = feeds.at(0).get_file_content("agency.txt");
+        auto content = feeds.at(0).get_file_content(files::AGENCY);
         if (!content.has_value()) {
             // TODO throw error
         }
@@ -67,7 +68,7 @@ namespace gtfs {
     }
 
     std::vector<Route> GtfsManager::get_routes() const {
-        auto content = feeds.at(0).get_file_content("routes.txt");
+        auto content = feeds.at(0).get_file_content(files::ROUTES);
         if (!content.has_value()) {
             // TODO throw error
         }
@@ -91,7 +92,7 @@ namespace gtfs {
     }
 
     std::optional<std::vector<Shape> > GtfsManager::get_shapes() const {
-        auto content = feeds.at(0).get_file_content("shapes.txt");
+        auto content = feeds.at(0).get_file_content(files::SHAPES);
         if (!content.has_value()) {
             // TODO throw error
             return std::nullopt;

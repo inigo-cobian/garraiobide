@@ -21,7 +21,7 @@ namespace io {
 
         ZipFile &operator=(const ZipFile &) = delete;
 
-        [[nodiscard]] std::expected<std::string, ExtractError> get_file_content(const std::string &filename) const;
+        [[nodiscard]] std::expected<std::string, ExtractError> get_file_content(const std::string_view &filename) const;
     private:
         zip *archive = nullptr;
     };

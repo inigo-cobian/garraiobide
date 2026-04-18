@@ -37,7 +37,7 @@ namespace io {
         return *this;
     }
 
-    std::expected<std::string, ExtractError> ZipFile::get_file_content(const std::string &filename) const {
+    std::expected<std::string, ExtractError> ZipFile::get_file_content(const std::string_view &filename) const {
         if (!archive) {
             return std::unexpected(ExtractError::FileNotOpen);
             // TODO log Should open the zip file before working with it
