@@ -7,10 +7,10 @@ namespace gtfs {
         OGRLineString line;
 
     public:
-        Shape(std::string code, OGRLineString line);
+        explicit Shape(std::string code, OGRLineString line);
 
-        [[nodiscard]] std::string get_code() const;
+        [[nodiscard]] const std::string &get_code() const;
 
-        [[nodiscard]] OGRLineString get_line() const;
+        [[nodiscard]] const OGRLineString &get_line() const;
     };
 }

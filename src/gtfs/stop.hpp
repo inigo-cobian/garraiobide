@@ -36,14 +36,14 @@ namespace gtfs {
                       std::optional<std::string> parent = std::nullopt);
 
 
-        [[nodiscard]] std::string get_id() const;
+        [[nodiscard]] const std::string &get_id() const;
 
-        [[nodiscard]] std::string get_name() const;
+        [[nodiscard]] const std::string &get_name() const;
 
-        [[nodiscard]] OGRPoint get_point() const;
+        [[nodiscard]] const OGRPoint &get_point() const;
 
-        [[nodiscard]] LocationType location_type() const;
+        [[nodiscard]] const LocationType &location_type() const;
 
-        [[nodiscard]] std::optional<std::string> parent_station() const;
+        [[nodiscard]] const std::optional<std::string> &parent_station() const;
     };
 }
