@@ -13,4 +13,4 @@ namespace gtfs {
     [[nodiscard]] OGRLineString Shape::get_line() const {
         return line;
     }
-} // gtfs
+}
