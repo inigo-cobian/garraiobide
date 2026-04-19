@@ -8,23 +8,23 @@ namespace gtfs {
           textColor(std::move(textColor)) {
     }
 
-    [[nodiscard]] const std::string &Route::get_id() const {
+    const std::string &Route::get_id() const {
         return id;
     }
 
-    [[nodiscard]] const std::string &Route::get_name() const {
+    const std::string &Route::get_name() const {
         return name;
     }
 
-    [[nodiscard]] const std::string &Route::get_type() const {
+    const std::string &Route::get_type() const {
         return type;
     }
 
-    [[nodiscard]] const std::string &Route::get_color() const {
+    const std::string &Route::get_color() const {
         return color;
     }
 
-    [[nodiscard]] const std::string &Route::get_text_color() const {
+    const std::string &Route::get_text_color() const {
         return textColor;
     }
 }

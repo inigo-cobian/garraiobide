@@ -8,7 +8,7 @@ namespace gtfs {
         std::string name;
 
     public:
-        explicit Agency(std::string id, std::string name);
+        [[nodiscard]] explicit Agency(std::string id, std::string name);
 
         [[nodiscard]] const std::string &get_id() const;
 

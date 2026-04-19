@@ -12,7 +12,7 @@ namespace gtfs {
         std::string textColor;
 
     public:
-        explicit Route(std::string id, std::string name, std::string type, std::string color, std::string textColor);
+        [[nodiscard]] explicit Route(std::string id, std::string name, std::string type, std::string color, std::string textColor);
 
         [[nodiscard]] const std::string &get_id() const;
 

@@ -7,7 +7,7 @@ namespace gtfs {
         OGRLineString line;
 
     public:
-        explicit Shape(std::string code, OGRLineString line);
+        [[nodiscard]] explicit Shape(std::string code, OGRLineString line);
 
         [[nodiscard]] const std::string &get_code() const;
 

@@ -22,18 +22,19 @@ namespace gtfs {
         std::optional<std::string> parentStation;
 
     public:
-        explicit Stop(std::string id, std::string name, float latitude, float longitude,
-                      LocationType type = LocationType::Stop,
-                      std::optional<std::string> parent = std::nullopt);
+        [[nodiscard]] explicit Stop(std::string id, std::string name, float latitude, float longitude,
+                                    LocationType type = LocationType::Stop,
+                                    std::optional<std::string> parent = std::nullopt);
 
-        explicit Stop(std::string id, std::string name, float latitude, float longitude, int type,
-                      std::optional<std::string> parent = std::nullopt);
+        [[nodiscard]] explicit Stop(std::string id, std::string name, float latitude, float longitude, int type,
+                                    std::optional<std::string> parent = std::nullopt);
 
-        explicit Stop(std::string id, std::string name, OGRPoint point, LocationType type = LocationType::Stop,
-                      std::optional<std::string> parent = std::nullopt);
+        [[nodiscard]] explicit Stop(std::string id, std::string name, OGRPoint point,
+                                    LocationType type = LocationType::Stop,
+                                    std::optional<std::string> parent = std::nullopt);
 
-        explicit Stop(std::string id, std::string name, OGRPoint point, int type,
-                      std::optional<std::string> parent = std::nullopt);
+        [[nodiscard]] explicit Stop(std::string id, std::string name, OGRPoint point, int type,
+                                    std::optional<std::string> parent = std::nullopt);
 
 
         [[nodiscard]] const std::string &get_id() const;

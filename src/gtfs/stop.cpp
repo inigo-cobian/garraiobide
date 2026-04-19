@@ -29,23 +29,23 @@ namespace gtfs {
           parentStation(std::move(parent)) {
     }
 
-    [[nodiscard]] const std::string &Stop::get_id() const {
+    const std::string &Stop::get_id() const {
         return id;
     }
 
-    [[nodiscard]] const std::string &Stop::get_name() const {
+    const std::string &Stop::get_name() const {
         return name;
     }
 
-    [[nodiscard]] const OGRPoint &Stop::get_point() const {
+    const OGRPoint &Stop::get_point() const {
         return point;
     }
 
-    [[nodiscard]] const LocationType &Stop::location_type() const {
+    const LocationType &Stop::location_type() const {
         return locationType;
     }
 
-    [[nodiscard]] const std::optional<std::string> &Stop::parent_station() const {
+    const std::optional<std::string> &Stop::parent_station() const {
         return parentStation;
     }
 }
