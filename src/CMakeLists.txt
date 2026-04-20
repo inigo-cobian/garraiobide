@@ -10,6 +10,7 @@ add_library(garraiobide_core
     gtfs/agency.cpp
     gtfs/route.cpp
     gtfs/shape.cpp
+    gtfs/trip.cpp
 )
 
 target_include_directories(garraiobide_core PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})

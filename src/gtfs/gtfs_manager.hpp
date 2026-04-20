@@ -7,6 +7,7 @@
 #include "route.hpp"
 #include "stop.hpp"
 #include "shape.hpp"
+#include "trip.hpp"
 
 namespace gtfs {
     class GtfsManager {
@@ -20,6 +21,8 @@ namespace gtfs {
         [[nodiscard]] std::vector<Route> get_routes() const;
 
         [[nodiscard]] std::optional<std::vector<Shape>> get_shapes() const;
+
+        [[nodiscard]] std::vector<Trip> get_trips() const;
 
     private:
         std::vector<io::ZipFile> feeds;

@@ -18,7 +18,7 @@ int main() {
 
     std::ofstream out(tmpfile.getPath());
 
-    out << renfeMdBilbaoGtfs;
+    out << metroBilbaoGtfs;
 
     gtfs::GtfsManager manager;
     manager.load_feed(tmpfile.getPath());
@@ -44,6 +44,12 @@ int main() {
     }
     for (const auto& shape : shapes.value()) {
         auto s = shape.get_line().exportToWkt();
+        std::cout << s << std::endl;
+    }
+
+    auto trips = manager.get_trips();
+    for (const auto& trip : trips) {
+        auto s = trip.get_shape_id();
         std::cout << s << std::endl;
     }
 

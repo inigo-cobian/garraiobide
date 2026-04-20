@@ -31,4 +31,12 @@ namespace gtfs::fields {
                 LONGITUDE = "shape_pt_lon",
                 SEQUENCE = "shape_pt_sequence";
     }
+
+    namespace trips {
+        static const std::string ID = "trip_id",
+                ROUTE_ID = "route_id",
+                HEADSIGN = "trip_headsign",
+                DIRECTION_ID = "direction_id",
+                SHAPE_ID = "shape_id";
+    }
 }

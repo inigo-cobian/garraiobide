@@ -135,4 +135,32 @@ namespace gtfs {
         }
         return std::make_optional(shapes);
     }
+
+    std::vector<Trip> GtfsManager::get_trips() const {
+        auto content = feeds.at(0).get_file_content(files::TRIPS);
+        if (!content.has_value()) {
+            // TODO throw error
+            return {};
+        }
+        auto csv = content.value();
+        if (csv.empty()) {
+            return {};
+        }
+
+        std::vector columns = {
+            fields::trips::ID, fields::trips::ROUTE_ID, fields::trips::HEADSIGN, fields::trips::DIRECTION_ID,
+            fields::trips::SHAPE_ID
+        };
+        auto result = io::CsvReader::parse_file(csv, ',', columns);
+
+        std::vector<Trip> trips;
+        for (auto line: result) {
+            auto trip = Trip(line.at(fields::trips::ID), line.at(fields::trips::ROUTE_ID),
+                             line.at(fields::trips::HEADSIGN),
+                             std::stoi(line.at(fields::trips::DIRECTION_ID)), line.at(fields::trips::SHAPE_ID));
+            trips.push_back(trip);
+        }
+
+        return trips;
+    }
 }
