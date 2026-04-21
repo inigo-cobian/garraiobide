@@ -39,4 +39,13 @@ namespace gtfs::fields {
                 DIRECTION_ID = "direction_id",
                 SHAPE_ID = "shape_id";
     }
+
+    namespace stop_times {
+        static const std::string TRIP_ID = "trip_id",
+                STOP_ID = "stop_id",
+                LOCATION_ID = "location_id",
+                STOP_SEQUENCE = "stop_sequence",
+                STOP_HEADSIGN = "stop_headsign",
+                SHAPE_DIST_TRAVELED = "shape_dist_traveled";
+    }
 }

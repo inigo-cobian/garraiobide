@@ -53,5 +53,10 @@ int main() {
         std::cout << s << std::endl;
     }
 
+    auto stop_times = manager.get_stop_times();
+    for (const auto& stop_time : stop_times) {
+        std::cout << stop_time.get_trip_id() << ":" << stop_time.get_stop_sequence() << std::endl;
+    }
+
     return 0;
 }

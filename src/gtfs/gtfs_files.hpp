@@ -8,7 +8,7 @@ namespace gtfs::files {
             ROUTES = "routes.txt",
             TRIPS = "trips.txt",
             STOPS = "stops.txt",
-            STOPS_TIMES = "stops_times.txt",
+            STOP_TIMES = "stop_times.txt",
             CALENDAR = "calendar.txt",
             CALENDAR_DATES = "calendar_dates.txt",
             FARE_ATTRIBUTES = "fare_attributes.txt",
@@ -38,7 +38,7 @@ namespace gtfs::files {
             ATTRIBUTIONS = "attributions.txt";
 
     constexpr std::array REQUIRED_FILES = {
-        AGENCY, ROUTES, TRIPS, STOPS, STOPS_TIMES, CALENDAR, CALENDAR_DATES
+        AGENCY, ROUTES, TRIPS, STOPS, STOP_TIMES, CALENDAR, CALENDAR_DATES
     };
 
     constexpr bool is_required(std::string_view filename) noexcept {

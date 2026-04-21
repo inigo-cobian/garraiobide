@@ -9,6 +9,7 @@
 #include "io/csv_reader.hpp"
 #include "gtfs_fields.hpp"
 #include "gtfs_files.hpp"
+#include "stop_time.hpp"
 
 namespace gtfs {
     void GtfsManager::load_feed(const std::string &zip_path) {
@@ -162,5 +163,39 @@ namespace gtfs {
         }
 
         return trips;
+    }
+
+    std::vector<StopTime> GtfsManager::get_stop_times() const {
+        auto content = feeds.at(0).get_file_content(files::STOP_TIMES);
+        if (!content.has_value()) {
+            // TODO throw error
+            return {};
+        }
+        auto csv = content.value();
+        if (csv.empty()) {
+            return {};
+        }
+
+        std::vector columns = {
+            fields::stop_times::TRIP_ID, fields::stop_times::STOP_ID, fields::stop_times::LOCATION_ID,
+            fields::stop_times::STOP_SEQUENCE, fields::stop_times::STOP_HEADSIGN,
+            fields::stop_times::SHAPE_DIST_TRAVELED
+        };
+        auto result = io::CsvReader::parse_file(csv, ',', columns);
+
+        std::vector<StopTime> stop_times;
+        for (auto line: result) {
+            auto dist_travelled = line.at(fields::stop_times::SHAPE_DIST_TRAVELED).empty()
+                                      ? NAN
+                                      : std::stof(line.at(fields::stop_times::SHAPE_DIST_TRAVELED));
+
+            auto stop_time = StopTime(line.at(fields::stop_times::TRIP_ID),
+                                      std::stoi(line.at(fields::stop_times::STOP_SEQUENCE)),
+                                      line.at(fields::stop_times::STOP_ID), line.at(fields::stop_times::LOCATION_ID),
+                                      dist_travelled);
+            stop_times.push_back(stop_time);
+        }
+
+        return stop_times;
     }
 }
