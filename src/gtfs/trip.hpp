@@ -23,5 +23,9 @@ namespace gtfs {
         [[nodiscard]] const int &get_direction_id() const;
 
         [[nodiscard]] const std::string &get_shape_id() const;
+
+        std::strong_ordering operator<=>(const Trip& other) const {
+            return id <=> other.id;
+        }
     };
 }
