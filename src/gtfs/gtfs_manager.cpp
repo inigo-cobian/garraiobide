@@ -216,9 +216,9 @@ namespace gtfs {
         return {filtered.begin(), filtered.end()};
     }
 
-    std::map<Trip, std::vector<Stop> > GtfsManager::get_trip_ordered_stops(std::vector<Stop> stops,
-                                                                           std::vector<Trip> trips,
-                                                                           std::vector<StopTime> stop_times) {
+    std::map<Trip, std::vector<Stop> > GtfsManager::get_trip_ordered_stops(const std::vector<Stop>& stops,
+                                                                           const std::vector<Trip>& trips,
+                                                                           const std::vector<StopTime>& stop_times) {
         std::map<Trip, std::vector<Stop> > ret;
         std::unordered_set<std::string> trip_ids_in_stop_times;
         auto foundTrips = get_trips_in_stop_times(trips, stop_times);
