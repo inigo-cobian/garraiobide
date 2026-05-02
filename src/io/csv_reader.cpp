@@ -5,7 +5,6 @@
 #include <string_view>
 #include <unordered_map>
 #include <vector>
-#include <bits/ranges_algobase.h>
 
 namespace io {
     auto split_lines(std::string_view text) {
@@ -16,13 +15,48 @@ namespace io {
     }
 
     std::vector<std::string> split_fields(std::string_view line, char delimiter) {
-        auto fields_view = line | std::views::split(delimiter) |
-                           std::views::transform([](auto &&part) {
-                               return std::string(part.begin(), part.end());
-                           });
         std::vector<std::string> fields;
-        fields.reserve(static_cast<size_t>(std::ranges::distance(fields_view)));
-        std::ranges::copy(fields_view, std::back_inserter(fields));
+        std::string current;
+        bool in_quotes = false;
+        size_t i = 0;
+        const size_t n = line.size();
+
+        auto push_field = [&] {
+            fields.push_back(std::move(current));
+            current.clear();
+        };
+
+        while (i < n) {
+            char c = line[i];
+            if (!in_quotes && c == delimiter) {
+                // Delimiter outside quotes: end current field
+                push_field();
+                ++i;
+            }
+            // Quoted field
+            else if (!in_quotes && c == '"') {
+                // Start of quoted field
+                in_quotes = true;
+                ++i;
+            }
+            // Either closing quote or scaped quote
+            else if (in_quotes && c == '"') {
+                if (i + 1 < n && line[i + 1] == '"') {
+                    // Escaped double quote: add one quote and skip the next char
+                    current.push_back('"');
+                    i += 2;
+                } else {
+                    // Closing quote
+                    in_quotes = false;
+                    ++i;
+                }
+            } else {
+                // Regular character (including commas inside quotes)
+                current.push_back(c);
+                ++i;
+            }
+        }
+        push_field();
         return fields;
     }
 
