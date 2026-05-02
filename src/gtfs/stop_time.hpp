@@ -4,10 +4,10 @@
 namespace gtfs {
 
 class StopTime {
-    std::string &trip_id;
+    std::string trip_id;
     int stop_sequence;
-    std::string &stop_id;
-    std::string &location_id;
+    std::string stop_id;
+    std::string location_id;
     float shape_dist_traveled;
 
 public:

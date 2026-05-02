@@ -13,17 +13,19 @@ int main() {
     auto metroBilbaoGtfs = io::HttpClient::download(metroBilbaoGtfsUrl);
     std::string renfeMdBilbaoGtfsUrl = "https://opendata.euskadi.eus/transport/moveuskadi/renfe_media/gtfs_renfe_media.zip";
     auto renfeMdBilbaoGtfs = io::HttpClient::download(renfeMdBilbaoGtfsUrl);
+    std::string euskotrenGtfsUrl = "https://opendata.euskadi.eus/transport/moveuskadi/euskotren/gtfs_euskotren.zip";
+    auto euskotrenGtfs = io::HttpClient::download(euskotrenGtfsUrl);
 
     auto tmpfile = io::TempFile("tmp", ".zip");
 
     std::ofstream out(tmpfile.getPath());
 
-    out << metroBilbaoGtfs;
+    out << euskotrenGtfs;
 
     gtfs::GtfsManager manager;
     manager.load_feed(tmpfile.getPath());
-    auto stops = manager.get_stops();
 
+    auto stops = manager.get_stops();
     for (const auto& stop : stops) {
         std::cout << stop.get_name() << std::endl;
     }
@@ -56,6 +58,14 @@ int main() {
     auto stop_times = manager.get_stop_times();
     for (const auto& stop_time : stop_times) {
         std::cout << stop_time.get_trip_id() << ":" << stop_time.get_stop_sequence() << std::endl;
+    }
+
+    auto result = gtfs::GtfsManager::get_trip_ordered_stops(stops, trips, stop_times);
+    for (const auto& res : result) {
+        std::cout << res.first.get_direction_id() << std::endl;
+        for (const auto& stop : res.second) {
+            std::cout << "     " << stop.get_name() << std::endl;
+        }
     }
 
     return 0;

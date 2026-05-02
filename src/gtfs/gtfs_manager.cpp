@@ -1,6 +1,7 @@
 #include "gtfs_manager.hpp"
 
 #include <algorithm>
+#include <iostream>
 #include <ranges>
 #include <ogr_geometry.h>
 #include <unordered_set>
@@ -34,8 +35,12 @@ namespace gtfs {
         for (auto line: result) {
             OGRPoint point;
             if (!line.at(fields::stops::LATITUDE).empty() && !line.at(fields::stops::LONGITUDE).empty()) {
-                point = OGRPoint(std::stof(line.at(fields::stops::LATITUDE)),
-                                 std::stof(line.at(fields::stops::LONGITUDE)));
+                try {
+                    point = OGRPoint(std::stof(line.at(fields::stops::LATITUDE)),
+                    std::stof(line.at(fields::stops::LONGITUDE)));
+                } catch (...) {
+                    point.empty();
+                }
             }
             auto type = line.at(fields::stops::TYPE).empty()
                             ? LocationType::Stop
@@ -190,13 +195,12 @@ namespace gtfs {
                                       ? NAN
                                       : std::stof(line.at(fields::stop_times::SHAPE_DIST_TRAVELED));
 
-            auto stop_time = StopTime(line.at(fields::stop_times::TRIP_ID),
-                                      std::stoi(line.at(fields::stop_times::STOP_SEQUENCE)),
-                                      line.at(fields::stop_times::STOP_ID), line.at(fields::stop_times::LOCATION_ID),
-                                      dist_travelled);
-            stop_times.push_back(stop_time);
+            stop_times.emplace_back(line.at(fields::stop_times::TRIP_ID),
+                                    std::stoi(line.at(fields::stop_times::STOP_SEQUENCE)),
+                                    line.at(fields::stop_times::STOP_ID),
+                                    line.at(fields::stop_times::LOCATION_ID),
+                                    dist_travelled);
         }
-
         return stop_times;
     }
 
@@ -204,8 +208,9 @@ namespace gtfs {
                                          const std::vector<StopTime>& stop_times) {
         std::unordered_set<std::string> trip_ids;
         trip_ids.reserve(stop_times.size());
-        for (const auto& st : stop_times)
+        for (const auto& st : stop_times) {
             trip_ids.insert(st.get_trip_id());
+        }
 
         auto filtered = trips
             | std::views::filter([&](const Trip& t) {
