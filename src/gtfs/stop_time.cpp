@@ -1,8 +1,8 @@
 #include "stop_time.hpp"
 
 namespace gtfs {
-    StopTime::StopTime(std::string &trip_id, int stop_sequence, std::string &stop_id, std::string &location_id,
-                         float shape_dist_traveled)
+    StopTime::StopTime(const std::string &trip_id, const int stop_sequence, const std::string &stop_id,
+                       const std::string &location_id, const float shape_dist_traveled)
         : trip_id(trip_id), stop_sequence(stop_sequence), stop_id(stop_id), location_id(location_id),
           shape_dist_traveled(shape_dist_traveled) {
     }

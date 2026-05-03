@@ -14,7 +14,7 @@ namespace io {
                });
     }
 
-    std::vector<std::string> split_fields(std::string_view line, char delimiter) {
+    std::vector<std::string> split_fields(const std::string_view line, const char delimiter) {
         std::vector<std::string> fields;
         std::string current;
         bool in_quotes = false;

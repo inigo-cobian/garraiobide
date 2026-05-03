@@ -11,7 +11,8 @@ class StopTime {
     float shape_dist_traveled;
 
 public:
-	explicit StopTime(std::string &trip_id, int stop_sequence, std::string &stop_id, std::string &location_id, float shape_dist_traveled);
+    explicit StopTime(const std::string &trip_id, int stop_sequence, const std::string &stop_id,
+                      const std::string &location_id, float shape_dist_traveled);
 
     [[nodiscard]] const std::string &get_trip_id() const;
 

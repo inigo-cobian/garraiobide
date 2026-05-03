@@ -25,7 +25,7 @@ namespace gtfs {
             // TODO throw error
         }
         auto csv = content.value();
-        std::vector columns = {
+        const std::vector columns = {
             fields::stops::ID, fields::stops::NAME, fields::stops::LATITUDE, fields::stops::LONGITUDE,
             fields::stops::TYPE, fields::stops::PARENT
         };
@@ -63,7 +63,7 @@ namespace gtfs {
             // TODO throw error
         }
         auto csv = content.value();
-        std::vector columns = {fields::agency::ID, fields::agency::NAME};
+        const std::vector columns = {fields::agency::ID, fields::agency::NAME};
         auto result = io::CsvReader::parse_file(csv, ',', columns);
 
         std::vector<Agency> agencies;
@@ -80,7 +80,7 @@ namespace gtfs {
             // TODO throw error
         }
         auto csv = content.value();
-        std::vector columns = {
+        const std::vector columns = {
             fields::routes::ID, fields::routes::SHORT_NAME, fields::routes::LONG_NAME, fields::routes::TYPE,
             fields::routes::COLOR, fields::routes::TEXT_COLOR
         };
@@ -108,7 +108,7 @@ namespace gtfs {
         if (csv.empty()) {
             return std::nullopt;
         }
-        std::vector columns = {
+        const std::vector columns = {
             fields::shapes::ID, fields::shapes::LATITUDE, fields::shapes::LONGITUDE, fields::shapes::SEQUENCE
         };
         auto result = io::CsvReader::parse_file(csv, ',', columns);
@@ -144,17 +144,17 @@ namespace gtfs {
     }
 
     std::vector<Trip> GtfsManager::get_trips() const {
-        auto content = feeds.at(0).get_file_content(files::TRIPS);
+        const auto content = feeds.at(0).get_file_content(files::TRIPS);
         if (!content.has_value()) {
             // TODO throw error
             return {};
         }
-        auto csv = content.value();
+        const auto csv = content.value();
         if (csv.empty()) {
             return {};
         }
 
-        std::vector columns = {
+        const std::vector columns = {
             fields::trips::ID, fields::trips::ROUTE_ID, fields::trips::HEADSIGN, fields::trips::DIRECTION_ID,
             fields::trips::SHAPE_ID
         };
@@ -177,12 +177,12 @@ namespace gtfs {
             // TODO throw error
             return {};
         }
-        auto csv = content.value();
+        const auto csv = content.value();
         if (csv.empty()) {
             return {};
         }
 
-        std::vector columns = {
+        const std::vector columns = {
             fields::stop_times::TRIP_ID, fields::stop_times::STOP_ID, fields::stop_times::LOCATION_ID,
             fields::stop_times::STOP_SEQUENCE, fields::stop_times::STOP_HEADSIGN,
             fields::stop_times::SHAPE_DIST_TRAVELED
@@ -216,8 +216,6 @@ namespace gtfs {
             | std::views::filter([&](const Trip& t) {
                 return trip_ids.contains(t.get_id());
             });
-
-        // TODO check if this returns the full vector
         return {filtered.begin(), filtered.end()};
     }
 
@@ -236,7 +234,7 @@ namespace gtfs {
             }
             auto stop_vector = std::vector<Stop>();
             for (const auto& stop: stops) {
-                if (std::find(stop_id_vector.begin(), stop_id_vector.end(), stop.get_id()) != stop_id_vector.end()) {
+                if (std::ranges::find(stop_id_vector, stop.get_id()) != stop_id_vector.end()) {
                     stop_vector.push_back(stop);
                 }
             }
