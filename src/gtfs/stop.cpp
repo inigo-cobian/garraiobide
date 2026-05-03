@@ -3,13 +3,13 @@
 #include <utility>
 
 namespace gtfs {
-    Stop::Stop(std::string id, std::string name, float latitude, float longitude, LocationType type,
+    Stop::Stop(std::string id, std::string name, const float latitude, const float longitude, const LocationType type,
                std::optional<std::string> parent)
         : id(std::move(id)), name(std::move(name)), point(latitude, longitude), locationType(type),
           parentStation(std::move(parent)) {
     }
 
-    Stop::Stop(std::string id, std::string name, float latitude, float longitude, int type,
+    Stop::Stop(std::string id, std::string name, const float latitude, const float longitude, const int type,
                std::optional<std::string> parent)
         : id(std::move(id)), name(std::move(name)), point(latitude, longitude),
           locationType(static_cast<LocationType>(type)),

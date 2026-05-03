@@ -3,7 +3,7 @@
 #include <utility>
 
 namespace gtfs {
-    Trip::Trip(std::string id, std::string routeId, std::string headsign, int directionId, std::string shapeId)
+    Trip::Trip(std::string id, std::string routeId, std::string headsign, const int directionId, std::string shapeId)
         : id(std::move(id)), routeId(std::move(routeId)), headsign(std::move(headsign)), directionId(directionId),
           shapeId(std::move(shapeId)) {
     }
