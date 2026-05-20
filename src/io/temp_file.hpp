@@ -5,7 +5,7 @@
 namespace io {
     class TempFile {
     public:
-        TempFile(const std::string &path, const std::string &extension);
+        TempFile(const std::string &extension);
 
         ~TempFile();
 

@@ -1,7 +1,7 @@
 #include "temp_file.hpp"
 
 namespace io {
-    TempFile::TempFile(const std::string &path, const std::string &extension) {
+    TempFile::TempFile(const std::string &extension) {
         path_ = std::filesystem::temp_directory_path() /
                 ("temp_" + std::to_string(std::rand()) + extension);
     }
