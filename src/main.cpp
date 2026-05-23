@@ -1,13 +1,19 @@
 #include <iostream>
 #include <fstream>
 
+#include "core/args.hpp"
+#include "core/config.hpp"
 #include "core/logger.hpp"
+#include "core/resource.hpp"
 #include "gtfs/gtfs_manager.hpp"
 #include "io/http_client.hpp"
 #include "io/temp_file.hpp"
 
-int main() {
+int main(int argc, char *argv[]) {
+
+    core::Args::init(argc, argv);
     core::Logger::init();
+    core::Config::init();
 
     std::string metroBilbaoGtfsUrl = "https://cms.metrobilbao.eus/get/open_data/horarios/eu";
     auto metroBilbaoGtfs = io::HttpClient::download(metroBilbaoGtfsUrl);
@@ -16,7 +22,21 @@ int main() {
     std::string euskotrenGtfsUrl = "https://opendata.euskadi.eus/transport/moveuskadi/euskotren/gtfs_euskotren.zip";
     auto euskotrenGtfs = io::HttpClient::download(euskotrenGtfsUrl);
 
-    auto tmpfile = io::TempFile("tmp", ".zip");
+    core::Resource res("metro-bilbao", metroBilbaoGtfsUrl, core::ResourceType::gtfs);
+    auto j = res.as_json();
+    std::cout << std::setw(4) << j << std::endl;
+
+    auto dir = core::Config::get_installation_dir() + "/resources/" + res.get_name() + ".json";
+    std::ofstream o(dir);
+    //o.open(core::Config::get_resource_dir() + res.get_name() + ".json");
+
+    if (!o.is_open()) {
+        throw std::runtime_error("Could not open resource file: " + dir);
+    }
+    o << std::setw(4) << j << std::endl;
+    return 0;
+
+    auto tmpfile = io::TempFile(".zip");
 
     std::ofstream out(tmpfile.getPath());
 
@@ -42,7 +62,7 @@ int main() {
 
     auto shapes = manager.get_shapes();
     if (!shapes.has_value()) {
-        return 0;
+        return 1;
     }
     for (const auto& shape : shapes.value()) {
         auto s = shape.get_line().exportToWkt();
@@ -62,7 +82,7 @@ int main() {
 
     auto result = gtfs::GtfsManager::get_trip_ordered_stops(stops, trips, stop_times);
     for (const auto& res : result) {
-        std::cout << res.first.get_direction_id() << std::endl;
+        std::cout << res.first.get_route_id() << std::endl;
         for (const auto& stop : res.second) {
             std::cout << "     " << stop.get_name() << std::endl;
         }
