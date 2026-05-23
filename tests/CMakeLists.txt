@@ -3,7 +3,8 @@ include(GoogleTest)
 
 add_executable(garraiobide_tests
     csv_reader_test.cpp
-        main_test.cpp
+    main_test.cpp
+    zip_file_test.cpp
 )
 
 target_include_directories(garraiobide_tests PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
