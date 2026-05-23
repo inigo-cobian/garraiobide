@@ -1,4 +1,5 @@
 add_library(garraiobide_core
+    core/args.cpp
     core/logger.cpp
     core/resource.cpp
     io/http_client.cpp
