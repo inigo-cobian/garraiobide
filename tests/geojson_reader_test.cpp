@@ -4,7 +4,7 @@
 #include <nlohmann/json.hpp>
 
 TEST(GeojsonReaderTest, read_emptyFile) {
-    EXPECT_THROW({ io::GeoJsonReader::read("files/empty.geojson"); }, std::runtime_error);
+    EXPECT_THROW({ io::GeoJsonReader::read("files/empty.json"); }, std::runtime_error);
 }
 
 TEST(GeojsonReaderTest, read_validFile) {
@@ -14,4 +14,8 @@ TEST(GeojsonReaderTest, read_validFile) {
 
     EXPECT_EQ(result["type"], "FeatureCollection");
     EXPECT_FALSE(result["features"].empty());
+}
+
+TEST(GeojsonReaderTest, read_validJsonIsNotAValidGeojson) {
+    EXPECT_THROW({ io::GeoJsonReader::read("files/test.json"); }, std::runtime_error);
 }
