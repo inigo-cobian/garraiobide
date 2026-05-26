@@ -11,6 +11,7 @@ add_executable(garraiobide_tests
         io/zip_file_test.cpp
         io/geojson_reader_test.cpp
         core/resource_test.cpp
+        gtfs/gtfs_manager_test.cpp
 )
 
 target_include_directories(garraiobide_tests PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
