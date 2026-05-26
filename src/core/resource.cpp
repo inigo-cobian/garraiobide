@@ -33,6 +33,7 @@ json core::Resource::as_json() const {
     json j;
     j["name"] = name;
     j["type"] = toString(type);
+    j["url"] = url;
     j["last_modified"] = last_modified.time_since_epoch().count();
     j["creation_time"] = creation_time.time_since_epoch().count();
     return j;
