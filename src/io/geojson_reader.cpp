@@ -22,11 +22,13 @@ namespace io {
             throw std::runtime_error("Cannot parse file or empty file");
         }
         // The GeoJSON could be validated further, but for now, let's do a simple analysis
-        if (data.contains("type") && data.at("type").is_string()) {
-            if (auto type = data["type"].get<std::string_view>(); !std::ranges::contains(validGeojsonTypes, type)) {
-                throw std::runtime_error("Cannot validate type of geoJSON");
-            }
+        if (!(data.contains("type") && data.at("type").is_string())) {
+            throw std::runtime_error("Cannot find type of geoJSON");
         }
+        if (auto type = data["type"].get<std::string_view>(); !std::ranges::contains(validGeojsonTypes, type)) {
+            throw std::runtime_error("Cannot validate type of geoJSON");
+        }
+
         return data;
     }
 }
