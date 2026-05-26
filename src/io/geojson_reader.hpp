@@ -1,9 +1,11 @@
 #pragma once
 #include <string>
 
+#include <nlohmann/json_fwd.hpp>
+
 namespace io {
     class GeoJsonReader {
     public:
-        static void read(const std::string &file);
+        [[nodiscard]] static nlohmann::json read(const std::string &file);
     };
 }
