@@ -1,13 +1,13 @@
 find_package(GTest REQUIRED)
 include(GoogleTest)
 
-file(COPY "${CMAKE_CURRENT_SOURCE_DIR}/files" DESTINATION "${CMAKE_CURRENT_BINARY_DIR}")
+file(COPY "io/files" DESTINATION "${CMAKE_CURRENT_BINARY_DIR}")
 
 add_executable(garraiobide_tests
-    csv_reader_test.cpp
-    main_test.cpp
-    zip_file_test.cpp
-    geojson_reader_test.cpp
+        io/csv_reader_test.cpp
+        io/main_test.cpp
+        io/zip_file_test.cpp
+        io/geojson_reader_test.cpp
 )
 
 target_include_directories(garraiobide_tests PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
