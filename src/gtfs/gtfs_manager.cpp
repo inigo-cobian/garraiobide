@@ -162,9 +162,12 @@ namespace gtfs {
 
         std::vector<Trip> trips;
         for (auto line: result) {
+            std::optional<int> directionId = line.at(fields::trips::DIRECTION_ID).empty()
+                ? std::nullopt
+                : std::make_optional(std::stoi(line.at(fields::trips::DIRECTION_ID)));
             auto trip = Trip(line.at(fields::trips::ID), line.at(fields::trips::ROUTE_ID),
                              line.at(fields::trips::HEADSIGN),
-                             std::stoi(line.at(fields::trips::DIRECTION_ID)), line.at(fields::trips::SHAPE_ID));
+                             directionId, line.at(fields::trips::SHAPE_ID));
             trips.push_back(trip);
         }
 

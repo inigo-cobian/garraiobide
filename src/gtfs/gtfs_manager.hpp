@@ -11,7 +11,7 @@
 #include "trip.hpp"
 
 namespace gtfs {
-    class GtfsManager {
+     class GtfsManager {
     public:
         void load_feed(const std::string &zip_path);
 

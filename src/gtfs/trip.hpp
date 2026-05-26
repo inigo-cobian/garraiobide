@@ -1,5 +1,6 @@
 #pragma once
 
+#include <optional>
 #include <string>
 
 namespace gtfs {
@@ -8,11 +9,11 @@ namespace gtfs {
         std::string id;
         std::string routeId;
         std::string headsign;
-        int directionId;
+        std::optional<int> directionId;
         std::string shapeId;
 
     public:
-        explicit Trip(std::string id, std::string routeId, std::string headsign, int directionId, std::string shapeId);
+        explicit Trip(std::string id, std::string routeId, std::string headsign, std::optional<int> directionId, std::string shapeId);
 
         [[nodiscard]] const std::string &get_id() const;
 
@@ -20,7 +21,7 @@ namespace gtfs {
 
         [[nodiscard]] const std::string &get_headsign() const;
 
-        [[nodiscard]] const int &get_direction_id() const;
+        [[nodiscard]] const std::optional<int> &get_direction_id() const;
 
         [[nodiscard]] const std::string &get_shape_id() const;
 
