@@ -26,6 +26,7 @@ find_package(nlohmann_json REQUIRED)
 find_package(fast-cpp-csv-parser REQUIRED)
 find_package(GDAL REQUIRED)
 find_package(args REQUIRED)
+find_package(mongocxx REQUIRED)
 
 target_link_libraries(garraiobide_core
     PUBLIC
@@ -35,6 +36,7 @@ target_link_libraries(garraiobide_core
     nlohmann_json::nlohmann_json
     GDAL::GDAL
     taywee::args
+    mongo::mongocxx_static
 )
 
 add_executable(garraiobide_app main.cpp)
