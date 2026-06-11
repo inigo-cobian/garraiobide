@@ -91,3 +91,6 @@ conan_provider.cmake
 
 # IntelliJ
 .idea
+
+# Docker
+docker/secrets/
