@@ -5,6 +5,7 @@
 #include "core/config.hpp"
 #include "core/logger.hpp"
 #include "core/resource.hpp"
+#include "data/mongodb_manager.hpp"
 #include "gtfs/gtfs_manager.hpp"
 #include "io/http_client.hpp"
 #include "io/temp_file.hpp"
@@ -34,6 +35,11 @@ int main(int argc, char *argv[]) {
         throw std::runtime_error("Could not open resource file: " + dir);
     }
     o << std::setw(4) << j << std::endl;
+
+    auto mongo_cfg = data::MongoDBManager::Config{};
+    mongo_cfg.uri = "mongodb://localhost:27017";
+    data::MongoDBManager mongo_mgr(std::move(mongo_cfg));
+    
     return 0;
 
     auto tmpfile = io::TempFile(".zip");
