@@ -3,7 +3,7 @@ add_library(garraiobide_core
     core/config.cpp
     core/logger.cpp
     core/resource.cpp
-    data/mongodb_manager.cpp
+    data/mongo/mongodb_manager.cpp
     io/http_client.cpp
     io/zip_file.cpp
     io/csv_reader.cpp
