@@ -207,42 +207,4 @@ namespace gtfs {
         return stop_times;
     }
 
-    std::vector<Trip> get_trips_in_stop_times(const std::vector<Trip>& trips,
-                                         const std::vector<StopTime>& stop_times) {
-        std::unordered_set<std::string> trip_ids;
-        trip_ids.reserve(stop_times.size());
-        for (const auto& st : stop_times) {
-            trip_ids.insert(st.get_trip_id());
-        }
-
-        auto filtered = trips
-            | std::views::filter([&](const Trip& t) {
-                return trip_ids.contains(t.get_id());
-            });
-        return {filtered.begin(), filtered.end()};
-    }
-
-    std::map<Trip, std::vector<Stop> > GtfsManager::get_trip_ordered_stops(const std::vector<Stop>& stops,
-                                                                           const std::vector<Trip>& trips,
-                                                                           const std::vector<StopTime>& stop_times) {
-        std::map<Trip, std::vector<Stop> > ret;
-        std::unordered_set<std::string> trip_ids_in_stop_times;
-        auto foundTrips = get_trips_in_stop_times(trips, stop_times);
-        for (const auto& trip : foundTrips) {
-            auto stop_id_vector = std::vector<std::string>();
-            for (const auto& stopTime : stop_times) {
-                if (stopTime.get_trip_id() == trip.get_id()) {
-                    stop_id_vector.push_back(stopTime.get_stop_id());
-                }
-            }
-            auto stop_vector = std::vector<Stop>();
-            for (const auto& stop: stops) {
-                if (std::ranges::find(stop_id_vector, stop.get_id()) != stop_id_vector.end()) {
-                    stop_vector.push_back(stop);
-                }
-            }
-            ret.insert({trip, stop_vector});
-        }
-        return ret;
-    }
 }

@@ -27,8 +27,6 @@ namespace gtfs {
 
         [[nodiscard]] std::vector<StopTime> get_stop_times() const;
 
-        [[nodiscard]] static std::map<Trip, std::vector<Stop>> get_trip_ordered_stops(const std::vector<Stop>&, const std::vector<Trip>&, const std::vector<StopTime>&) ;
-
     private:
         std::vector<io::ZipFile> feeds;
     };
