@@ -41,7 +41,7 @@ namespace core {
             std::cerr << parser;
             return 1;
         }
-        mongdbUri = "mongodb://" + mongoUser.Get() + ":" + mongoPass.Get() + "@" + mongoUrl.Get();
+        mongdbUri = "mongodb://" + mongoUser.Get() + ":" + mongoPass.Get() + "@" + mongoUrl.Get() + "/?authSource=admin&authMechanism=SCRAM-SHA-256";
 
         return 0;
     }
