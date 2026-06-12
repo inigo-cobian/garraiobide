@@ -160,18 +160,24 @@ namespace gtfs {
         };
         auto result = io::CsvReader::parse_file(csv, ',', columns);
 
-        std::vector<Trip> trips;
+        // We assume that two trips with the same shape overlap
+        std::unordered_map<std::string, Trip> shape_id_to_map;
         for (auto line: result) {
+            auto shape_id = line.at(fields::trips::SHAPE_ID);
+            if (shape_id_to_map.contains(shape_id)) {
+                continue;
+            }
+
             std::optional<int> directionId = line.at(fields::trips::DIRECTION_ID).empty()
                 ? std::nullopt
                 : std::make_optional(std::stoi(line.at(fields::trips::DIRECTION_ID)));
             auto trip = Trip(line.at(fields::trips::ID), line.at(fields::trips::ROUTE_ID),
                              line.at(fields::trips::HEADSIGN),
-                             directionId, line.at(fields::trips::SHAPE_ID));
-            trips.push_back(trip);
+                             directionId, shape_id);
+            shape_id_to_map.emplace(shape_id, trip);
         }
 
-        return trips;
+        return shape_id_to_map | std::ranges::views::values | std::ranges::to<std::vector>();
     }
 
     std::vector<StopTime> GtfsManager::get_stop_times() const {
