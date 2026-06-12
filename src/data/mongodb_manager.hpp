@@ -24,7 +24,7 @@ namespace data {
 
         MongoDBManager &operator=(MongoDBManager &&) noexcept = default;
 
-        mongocxx::collection getCollection(std::string_view coll_name) const;
+        [[nodiscard]] mongocxx::collection getCollection(std::string_view coll_name) const;
 
     private:
         Config config_;
