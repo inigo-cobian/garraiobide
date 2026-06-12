@@ -24,7 +24,7 @@ namespace gtfs {
         if (!content.has_value()) {
             // TODO throw error
         }
-        auto csv = content.value();
+        const auto& csv = content.value();
         const std::vector columns = {
             fields::stops::ID, fields::stops::NAME, fields::stops::LATITUDE, fields::stops::LONGITUDE,
             fields::stops::TYPE, fields::stops::PARENT
@@ -62,7 +62,7 @@ namespace gtfs {
         if (!content.has_value()) {
             // TODO throw error
         }
-        auto csv = content.value();
+        const auto& csv = content.value();
         const std::vector columns = {fields::agency::ID, fields::agency::NAME};
         auto result = io::CsvReader::parse_file(csv, ',', columns);
 
@@ -79,7 +79,7 @@ namespace gtfs {
         if (!content.has_value()) {
             // TODO throw error
         }
-        auto csv = content.value();
+        const auto& csv = content.value();
         const std::vector columns = {
             fields::routes::ID, fields::routes::SHORT_NAME, fields::routes::LONG_NAME, fields::routes::TYPE,
             fields::routes::COLOR, fields::routes::TEXT_COLOR
@@ -104,7 +104,7 @@ namespace gtfs {
             // TODO throw error
             return std::nullopt;
         }
-        auto csv = content.value();
+        const auto& csv = content.value();
         if (csv.empty()) {
             return std::nullopt;
         }
@@ -115,7 +115,7 @@ namespace gtfs {
 
         std::map<std::string, std::vector<std::pair<int, OGRPoint> > > shapes_map;
         for (auto row: result) {
-            const std::string shape_id = row.at(fields::shapes::ID);
+            const std::string& shape_id = row.at(fields::shapes::ID);
             const int sequence = atoi(row.at(fields::shapes::SEQUENCE).c_str());
             const double lat = std::stod(row.at(fields::shapes::LATITUDE));
             const double lon = std::stod(row.at(fields::shapes::LONGITUDE));
@@ -138,7 +138,7 @@ namespace gtfs {
             for (auto &pt: ordered_points) {
                 line.addPoint(&pt);
             }
-            shapes.push_back(Shape(shape_id, line));
+            shapes.emplace_back(shape_id, line);
         }
         return std::make_optional(shapes);
     }
@@ -149,7 +149,7 @@ namespace gtfs {
             // TODO throw error
             return {};
         }
-        const auto csv = content.value();
+        const auto& csv = content.value();
         if (csv.empty()) {
             return {};
         }
@@ -180,7 +180,7 @@ namespace gtfs {
             // TODO throw error
             return {};
         }
-        const auto csv = content.value();
+        const auto& csv = content.value();
         if (csv.empty()) {
             return {};
         }
@@ -230,7 +230,7 @@ namespace gtfs {
         auto foundTrips = get_trips_in_stop_times(trips, stop_times);
         for (const auto& trip : foundTrips) {
             auto stop_id_vector = std::vector<std::string>();
-            for (auto stopTime : stop_times) {
+            for (const auto& stopTime : stop_times) {
                 if (stopTime.get_trip_id() == trip.get_id()) {
                     stop_id_vector.push_back(stopTime.get_stop_id());
                 }
