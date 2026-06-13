@@ -39,7 +39,7 @@ int main(int argc, char *argv[]) {
     auto mongo_cfg = data::MongoDBManager::Config{};
     mongo_cfg.uri = "mongodb://localhost:27017";
     data::MongoDBManager mongo_mgr(std::move(mongo_cfg));
-    
+
     return 0;
 
     auto tmpfile = io::TempFile(".zip");
