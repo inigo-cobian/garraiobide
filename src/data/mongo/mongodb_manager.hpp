@@ -1,5 +1,6 @@
+#pragma once
+
 #include <mongocxx/pool.hpp>
-#include <mongocxx/uri.hpp>
 #include <string>
 #include <memory>
 
