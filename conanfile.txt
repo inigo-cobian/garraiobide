@@ -9,6 +9,7 @@ gdal/3.12.1
 boost/1.90.0
 taywee-args/6.4.6
 mongo-cxx-driver/4.0.0
+libpqxx/8.0.1
 
 [generators]
 CMakeDeps

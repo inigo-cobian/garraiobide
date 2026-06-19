@@ -32,6 +32,7 @@ find_package(fast-cpp-csv-parser REQUIRED)
 find_package(GDAL REQUIRED)
 find_package(args REQUIRED)
 find_package(mongocxx REQUIRED)
+find_package(libpqxx REQUIRED)
 
 target_link_libraries(garraiobide_core
     PUBLIC
@@ -42,6 +43,7 @@ target_link_libraries(garraiobide_core
     GDAL::GDAL
     taywee::args
     mongo::mongocxx_static
+    libpqxx::pqxx
 )
 
 add_executable(garraiobide_app main.cpp)
