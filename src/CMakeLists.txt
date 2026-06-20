@@ -1,6 +1,5 @@
 add_library(garraiobide_core
     core/args.cpp
-    core/config.cpp
     core/logger.cpp
     core/resource.cpp
     core/stop.cpp
@@ -8,6 +7,7 @@ add_library(garraiobide_core
     core/stop_in_line.cpp
     data/mongo/mongodb_manager.cpp
     data/mongo/stop_repository.cpp
+    data/postgis/postgis_manager.cpp
     io/http_client.cpp
     io/zip_file.cpp
     io/csv_reader.cpp
@@ -20,6 +20,7 @@ add_library(garraiobide_core
     gtfs/shape.cpp
     gtfs/trip.cpp
     gtfs/stop_time.cpp
+    ui/color.cpp
 )
 
 target_include_directories(garraiobide_core PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
