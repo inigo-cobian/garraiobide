@@ -1,7 +1,3 @@
-//
-// Created by cosmos on 6/14/26.
-//
-
 #include "line.hpp"
 
 #include <utility>

@@ -1,5 +1,5 @@
 #pragma once
-#include "ui/Color.hpp"
+#include "ui/color.hpp"
 #include <string>
 
 namespace core {
@@ -11,8 +11,8 @@ namespace core {
         std::string source;
 
     public:
-        [[nodiscard]] Line(std::string id, std::string name, ui::Color color, ui::Color text_color,
-                           std::string source);
+        [[nodiscard]] Line(const std::string &id, const std::string &name, ui::Color color,
+                           ui::Color text_color, const std::string &source);
 
         [[nodiscard]] std::string get_id() const;
 
