@@ -4,10 +4,6 @@
 #include <iostream>
 #include <ranges>
 #include <ogr_geometry.h>
-#include <unordered_set>
-
-#include <bits/ranges_algo.h>
-
 #include "io/csv_reader.hpp"
 #include "gtfs_fields.hpp"
 #include "gtfs_files.hpp"
