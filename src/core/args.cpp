@@ -3,17 +3,17 @@
 #include <args.hxx>
 
 namespace core {
-    void runStartup(const RunConfig& run_config) {
+    void runStartup(const RunConfig &run_config) {
         std::cout << "Running app with log level: " << run_config.logLevel << std::endl;
         std::cout << "MongoDB: " << run_config.mongoUser << "@" << run_config.mongoUrl << std::endl;
         std::cout << "PostGIS: " << run_config.pgUser << "@" << run_config.pgUrl << std::endl;
     }
 
-    void statsStartup(const StartupConfig& startup_config) {
+    void statsStartup(const StartupConfig &startup_config) {
         std::cout << "Displaying statistics with log level: " << startup_config.logLevel << std::endl;
     }
 
-    void ingestStartup(const IngestConfig& ingest_config) {
+    void ingestStartup(const IngestConfig &ingest_config) {
         std::cout << "Ingesting " << ingest_config.type << " resource: " << ingest_config.name << std::endl;
         std::cout << "URL: " << ingest_config.url << ", Credentials: " << ingest_config.credentials << std::endl;
     }
@@ -21,10 +21,17 @@ namespace core {
     std::expected<StartupConfig, std::runtime_error> Args::parse_args(int argc, char *argv[]) {
         args::ArgumentParser parser("Options for Garraiobide.", "Kontuz nasa eta trenaren arteko tartearekin.");
         args::HelpFlag help(parser, "help", "Display this help menu", {'h', "help"});
-        args::ValueFlag<std::string> logLevel(parser, "level", "Set the logging level (error, warning, info, debug)",
+
+        args::Group globalOpts(parser, "global options", args::Group::Validators::DontCare, args::Options::Global);
+        args::ValueFlag<std::string> logLevel(globalOpts, "level",
+                                              "Set the logging level (error, warning, info, debug)",
                                               {'l', "log"}, "info");
 
         args::Group commands(parser, "commands", args::Group::Validators::AtMostOne);
+
+        RunConfig run_config;
+        IngestConfig ingest_config;
+        StatsConfig stats_config;
 
         args::Command runCmd(
             commands,
@@ -41,11 +48,16 @@ namespace core {
                 s.Parse();
 
                 if (!mongoUser || !mongoPass || !mongoUrl || !pgUser || !pgPass || !pgUrl) {
-                    std::cerr << "Error: Missing required arguments for 'run'." << std::endl;
-                    return;
+                    throw std::runtime_error("Missing required arguments for 'run'");
                 }
 
-                std::string level = args::get(logLevel);
+                run_config.mongoUser = args::get(mongoUser);
+                run_config.mongoPass = args::get(mongoPass);
+                run_config.mongoUrl = args::get(mongoUrl);
+                run_config.pgUser = args::get(pgUser);
+                run_config.pgPass = args::get(pgPass);
+                run_config.pgUrl = args::get(pgUrl);
+                run_config.mode = LaunchMode::Run;
             }
         );
 
@@ -55,6 +67,8 @@ namespace core {
             "Display statistics",
             [&](args::Subparser &s) {
                 s.Parse();
+
+                stats_config.mode = LaunchMode::Stats;
             }
         );
 
@@ -72,8 +86,14 @@ namespace core {
                 s.Parse();
 
                 if (!resourceName || !resourceType || !resourceUrl || !resourceCreds) {
-                    std::cerr << "Error: Missing required arguments for 'ingest'." << std::endl;
+                    throw std::runtime_error("Error: Missing required arguments for 'ingest'.");
                 }
+
+                ingest_config.name = args::get(resourceName);
+                ingest_config.type = args::get(resourceType);
+                ingest_config.url = args::get(resourceUrl);
+                ingest_config.credentials = args::get(resourceCreds);
+                ingest_config.mode = LaunchMode::Ingest;
             }
         );
         try {
@@ -85,20 +105,24 @@ namespace core {
         } catch (const args::ParseError &e) {
             throw std::runtime_error(e.what() + parser);
         }
+
         //auto mongoUrl = "mongodb://" + mongoUser.Get() + ":" + mongoPass.Get() + "@" + mongoUrl.Get() + "/?authSource=admin&authMechanism=SCRAM-SHA-256";
         if (runCmd) {
-            RunConfig run_config{};
+            run_config.logLevel = args::get(logLevel);;
             runStartup(run_config);
+            return run_config;
         }
 
         if (statsCmd) {
-            StatsConfig stats_config{};
+            stats_config.logLevel = args::get(logLevel);;
             statsStartup(stats_config);
+            return stats_config;
         }
 
         if (ingestCmd) {
-            IngestConfig ingest_config{};
+            ingest_config.logLevel = args::get(logLevel);;
             ingestStartup(ingest_config);
+            return ingest_config;
         }
         throw std::runtime_error("No mode found");
     }
