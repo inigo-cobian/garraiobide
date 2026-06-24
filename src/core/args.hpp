@@ -4,7 +4,7 @@
 #include <stdexcept>
 #include <string>
 
-#include "LogLevel.hpp"
+#include "log_level.hpp"
 
 namespace core {
     enum LaunchMode {
