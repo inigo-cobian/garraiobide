@@ -2,14 +2,15 @@
 #include <unordered_map>
 
 enum class LogLevel {
-    Debug, Info, Warn
+    Debug, Info, Warn, Error
 };
 
 inline std::expected<LogLevel, std::runtime_error> to_log_level(const std::string &s) {
     static const std::unordered_map<std::string, LogLevel> map = {
         {"debug", LogLevel::Debug},
         {"info", LogLevel::Info},
-        {"warn", LogLevel::Warn}
+        {"warn", LogLevel::Warn},
+        {"error", LogLevel::Error}
     };
     auto it = map.find(s);
     if (it != map.end()) {
