@@ -1,5 +1,6 @@
 #pragma once
 #include <expected>
+#include <memory>
 #include <stdexcept>
 #include <string>
 
@@ -14,8 +15,14 @@ namespace core {
     protected:
         LaunchMode mode;
         LogLevel logLevel;
+
     public:
+        StartupConfig() = default;
+
+        ~StartupConfig() = default;
+
         LaunchMode getMode();
+
         LogLevel getLogLevel();
 
         void initializeLogger(LogLevel level);
@@ -28,12 +35,18 @@ namespace core {
         std::string pgUser;
         std::string pgPass;
         std::string pgUrl;
+
     public:
         RunConfig();
+
+        ~RunConfig() = default;
+
         [[nodiscard]] std::string getMongoUri();
+
         [[nodiscard]] std::string getPostgresUri();
 
         void setMongo(std::string user, std::string pass, std::string url);
+
         void setPostgres(std::string user, std::string pass, std::string url);
     };
 
@@ -44,14 +57,23 @@ namespace core {
         std::string credentials; // TODO credentials should be managed according to the credential needs
     public:
         IngestConfig();
+
+        ~IngestConfig() = default;
+
         [[nodiscard]] std::string getName();
+
         [[nodiscard]] std::string getType();
+
         [[nodiscard]] std::string getUrl();
+
         [[nodiscard]] std::string getCredentials();
 
         void setName(std::string name);
+
         void setType(std::string type);
+
         void setUrl(std::string url);
+
         void setCredentials(std::string credentials);
     };
 
@@ -59,10 +81,15 @@ namespace core {
         // empty
     public:
         StatsConfig();
+
+        ~StatsConfig() = default;
     };
+
+    using ConfigVariant = std::variant<RunConfig, IngestConfig, StatsConfig>;
 
     class Args {
     public:
-        [[nodiscard]] static std::expected<StartupConfig, std::runtime_error> parse_args(int argc, char *argv[]);
+        [[nodiscard]] static std::expected<ConfigVariant, std::runtime_error> parse_args(
+            int argc, char *argv[]);
     };
 }

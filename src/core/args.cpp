@@ -1,6 +1,7 @@
 #include "args.hpp"
 
 #include <args.hxx>
+#include <memory>
 
 namespace core {
     LaunchMode StartupConfig::getMode() {
@@ -15,7 +16,7 @@ namespace core {
         this->logLevel = level;
     }
 
-    RunConfig::RunConfig() {
+    RunConfig::RunConfig() : StartupConfig() {
         this->mode = Run;
     }
 
@@ -41,7 +42,7 @@ namespace core {
         this->pgUrl = url;
     }
 
-    IngestConfig::IngestConfig() {
+    IngestConfig::IngestConfig() : StartupConfig() {
         this->mode = Ingest;
     }
 
@@ -77,11 +78,11 @@ namespace core {
         this->credentials = credentials;
     }
 
-    StatsConfig::StatsConfig() {
+    StatsConfig::StatsConfig() : StartupConfig() {
         this->mode = Stats;
     }
 
-    std::expected<StartupConfig, std::runtime_error> Args::parse_args(int argc, char *argv[]) {
+    std::expected<ConfigVariant, std::runtime_error> Args::parse_args(int argc, char *argv[]) {
         args::ArgumentParser parser("Options for Garraiobide.", "Kontuz nasa eta trenaren arteko tartearekin.");
         args::HelpFlag help(parser, "help", "Display this help menu", {'h', "help"});
 
@@ -92,9 +93,7 @@ namespace core {
 
         args::Group commands(parser, "commands", args::Group::Validators::AtMostOne);
 
-        RunConfig run_config;
-        IngestConfig ingest_config;
-        StatsConfig stats_config;
+        ConfigVariant result;
 
         args::Command runCmd(
             commands,
@@ -114,8 +113,10 @@ namespace core {
                     throw std::runtime_error("Missing required arguments for 'run'");
                 }
 
-                run_config.setMongo(args::get(mongoUser), args::get(mongoPass), args::get(mongoUrl));
-                run_config.setPostgres(args::get(mongoUser), args::get(mongoPass), args::get(mongoUrl));
+                RunConfig cfg;
+                cfg.setMongo(args::get(mongoUser), args::get(mongoPass), args::get(mongoUrl));
+                cfg.setPostgres(args::get(pgUser), args::get(pgPass), args::get(pgUrl));
+                result = cfg;
             }
         );
 
@@ -125,6 +126,7 @@ namespace core {
             "Display statistics",
             [&](args::Subparser &s) {
                 s.Parse();
+                result = StatsConfig{};
             }
         );
 
@@ -145,10 +147,12 @@ namespace core {
                     throw std::runtime_error("Error: Missing required arguments for 'ingest'.");
                 }
 
-                ingest_config.setName(args::get(resourceName));
-                ingest_config.setType(args::get(resourceType));
-                ingest_config.setUrl(args::get(resourceUrl));
-                ingest_config.setCredentials(args::get(resourceCreds));
+                IngestConfig cfg;
+                cfg.setName(args::get(resourceName));
+                cfg.setType(args::get(resourceType));
+                cfg.setUrl(args::get(resourceUrl));
+                cfg.setCredentials(args::get(resourceCreds));
+                result = cfg;
             }
         );
         try {
@@ -161,21 +165,18 @@ namespace core {
             throw std::runtime_error(e.what() + parser);
         }
 
-        if (runCmd) {
-            auto levelStr = args::get(logLevel);
-            run_config.initializeLogger(to_log_level(args::get(logLevel)).value());
-            return run_config;
+        if (!runCmd && !ingestCmd && !statsCmd) {
+            return std::unexpected(std::runtime_error("No mode specified"));
+        }
+        auto level = to_log_level(args::get(logLevel));
+        if (!level) {
+            return std::unexpected(level.error());
         }
 
-        if (statsCmd) {
-            stats_config.initializeLogger(to_log_level(args::get(logLevel)).value());
-            return stats_config;
-        }
+        std::visit([&](auto &cfg) {
+            cfg.initializeLogger(*level);
+        }, result);
 
-        if (ingestCmd) {
-            ingest_config.initializeLogger(to_log_level(args::get(logLevel)).value());
-            return ingest_config;
-        }
-        throw std::runtime_error("No mode found");
+        return result;
     }
 }

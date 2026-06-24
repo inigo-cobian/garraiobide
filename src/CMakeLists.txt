@@ -20,6 +20,9 @@ add_library(garraiobide_core
     gtfs/shape.cpp
     gtfs/trip.cpp
     gtfs/stop_time.cpp
+    init/run.cpp
+    init/run_stats.cpp
+    init/run_ingest.cpp
     ui/color.cpp
 )
 
