@@ -3,6 +3,8 @@
 #include <stdexcept>
 #include <string>
 
+#include "LogLevel.hpp"
+
 namespace core {
     enum LaunchMode {
         Run, Ingest, Stats
@@ -11,12 +13,12 @@ namespace core {
     class StartupConfig {
     protected:
         LaunchMode mode;
-        std::string logLevel;
+        LogLevel logLevel;
     public:
         LaunchMode getMode();
-        std::string getLogLevel();
+        LogLevel getLogLevel();
 
-        void initializeLogger(std::string level);
+        void initializeLogger(LogLevel level);
     };
 
     class RunConfig : public StartupConfig {

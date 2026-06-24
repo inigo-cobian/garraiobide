@@ -7,11 +7,11 @@ namespace core {
         return mode;
     }
 
-    std::string StartupConfig::getLogLevel() {
+    LogLevel StartupConfig::getLogLevel() {
         return logLevel;
     }
 
-    void StartupConfig::initializeLogger(std::string level) {
+    void StartupConfig::initializeLogger(LogLevel level) {
         this->logLevel = level;
     }
 
@@ -162,17 +162,18 @@ namespace core {
         }
 
         if (runCmd) {
-            run_config.initializeLogger(args::get(logLevel));
+            auto levelStr = args::get(logLevel);
+            run_config.initializeLogger(to_log_level(args::get(logLevel)).value());
             return run_config;
         }
 
         if (statsCmd) {
-            stats_config.initializeLogger(args::get(logLevel));
+            stats_config.initializeLogger(to_log_level(args::get(logLevel)).value());
             return stats_config;
         }
 
         if (ingestCmd) {
-            ingest_config.initializeLogger(args::get(logLevel));
+            ingest_config.initializeLogger(to_log_level(args::get(logLevel)).value());
             return ingest_config;
         }
         throw std::runtime_error("No mode found");
