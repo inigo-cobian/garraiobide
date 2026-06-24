@@ -3,19 +3,82 @@
 #include <args.hxx>
 
 namespace core {
-    void runStartup(const RunConfig &run_config) {
-        std::cout << "Running app with log level: " << run_config.logLevel << std::endl;
-        std::cout << "MongoDB: " << run_config.mongoUser << "@" << run_config.mongoUrl << std::endl;
-        std::cout << "PostGIS: " << run_config.pgUser << "@" << run_config.pgUrl << std::endl;
+    LaunchMode StartupConfig::getMode() {
+        return mode;
     }
 
-    void statsStartup(const StartupConfig &startup_config) {
-        std::cout << "Displaying statistics with log level: " << startup_config.logLevel << std::endl;
+    std::string StartupConfig::getLogLevel() {
+        return logLevel;
     }
 
-    void ingestStartup(const IngestConfig &ingest_config) {
-        std::cout << "Ingesting " << ingest_config.type << " resource: " << ingest_config.name << std::endl;
-        std::cout << "URL: " << ingest_config.url << ", Credentials: " << ingest_config.credentials << std::endl;
+    void StartupConfig::initializeLogger(std::string level) {
+        this->logLevel = level;
+    }
+
+    RunConfig::RunConfig() {
+        this->mode = Run;
+    }
+
+    std::string RunConfig::getMongoUri() {
+        return "mongodb://" + this->mongoUser + ":" + this->mongoPass + "@" + this->mongoUrl +
+               "/?authSource=admin&authMechanism=SCRAM-SHA-256";
+    }
+
+    std::string RunConfig::getPostgresUri() {
+        // TODO manage credentials (?)
+        return this->pgUrl;
+    }
+
+    void RunConfig::setMongo(std::string user, std::string pass, std::string url) {
+        this->mongoUser = user;
+        this->mongoPass = pass;
+        this->mongoUrl = url;
+    }
+
+    void RunConfig::setPostgres(std::string user, std::string pass, std::string url) {
+        this->pgUser = user;
+        this->pgPass = pass;
+        this->pgUrl = url;
+    }
+
+    IngestConfig::IngestConfig() {
+        this->mode = Ingest;
+    }
+
+    std::string IngestConfig::getName() {
+        return name;
+    }
+
+    std::string IngestConfig::getType() {
+        return type;
+    }
+
+    std::string IngestConfig::getUrl() {
+        return url;
+    }
+
+    std::string IngestConfig::getCredentials() {
+        return credentials;
+    }
+
+    void IngestConfig::setName(std::string name) {
+        this->name = name;
+    }
+
+    void IngestConfig::setType(std::string type) {
+        this->type = type;
+    }
+
+    void IngestConfig::setUrl(std::string url) {
+        this->url = url;
+    }
+
+    void IngestConfig::setCredentials(std::string credentials) {
+        this->credentials = credentials;
+    }
+
+    StatsConfig::StatsConfig() {
+        this->mode = Stats;
     }
 
     std::expected<StartupConfig, std::runtime_error> Args::parse_args(int argc, char *argv[]) {
@@ -51,13 +114,8 @@ namespace core {
                     throw std::runtime_error("Missing required arguments for 'run'");
                 }
 
-                run_config.mongoUser = args::get(mongoUser);
-                run_config.mongoPass = args::get(mongoPass);
-                run_config.mongoUrl = args::get(mongoUrl);
-                run_config.pgUser = args::get(pgUser);
-                run_config.pgPass = args::get(pgPass);
-                run_config.pgUrl = args::get(pgUrl);
-                run_config.mode = LaunchMode::Run;
+                run_config.setMongo(args::get(mongoUser), args::get(mongoPass), args::get(mongoUrl));
+                run_config.setPostgres(args::get(mongoUser), args::get(mongoPass), args::get(mongoUrl));
             }
         );
 
@@ -67,8 +125,6 @@ namespace core {
             "Display statistics",
             [&](args::Subparser &s) {
                 s.Parse();
-
-                stats_config.mode = LaunchMode::Stats;
             }
         );
 
@@ -89,11 +145,10 @@ namespace core {
                     throw std::runtime_error("Error: Missing required arguments for 'ingest'.");
                 }
 
-                ingest_config.name = args::get(resourceName);
-                ingest_config.type = args::get(resourceType);
-                ingest_config.url = args::get(resourceUrl);
-                ingest_config.credentials = args::get(resourceCreds);
-                ingest_config.mode = LaunchMode::Ingest;
+                ingest_config.setName(args::get(resourceName));
+                ingest_config.setType(args::get(resourceType));
+                ingest_config.setUrl(args::get(resourceUrl));
+                ingest_config.setCredentials(args::get(resourceCreds));
             }
         );
         try {
@@ -106,22 +161,18 @@ namespace core {
             throw std::runtime_error(e.what() + parser);
         }
 
-        //auto mongoUrl = "mongodb://" + mongoUser.Get() + ":" + mongoPass.Get() + "@" + mongoUrl.Get() + "/?authSource=admin&authMechanism=SCRAM-SHA-256";
         if (runCmd) {
-            run_config.logLevel = args::get(logLevel);;
-            runStartup(run_config);
+            run_config.initializeLogger(args::get(logLevel));
             return run_config;
         }
 
         if (statsCmd) {
-            stats_config.logLevel = args::get(logLevel);;
-            statsStartup(stats_config);
+            stats_config.initializeLogger(args::get(logLevel));
             return stats_config;
         }
 
         if (ingestCmd) {
-            ingest_config.logLevel = args::get(logLevel);;
-            ingestStartup(ingest_config);
+            ingest_config.initializeLogger(args::get(logLevel));
             return ingest_config;
         }
         throw std::runtime_error("No mode found");

@@ -8,29 +8,55 @@ namespace core {
         Run, Ingest, Stats
     };
 
-    struct StartupConfig {
+    class StartupConfig {
+    protected:
         LaunchMode mode;
         std::string logLevel;
+    public:
+        LaunchMode getMode();
+        std::string getLogLevel();
+
+        void initializeLogger(std::string level);
     };
 
-    struct RunConfig : public StartupConfig {
+    class RunConfig : public StartupConfig {
         std::string mongoUser;
         std::string mongoPass;
         std::string mongoUrl;
         std::string pgUser;
         std::string pgPass;
         std::string pgUrl;
+    public:
+        RunConfig();
+        [[nodiscard]] std::string getMongoUri();
+        [[nodiscard]] std::string getPostgresUri();
+
+        void setMongo(std::string user, std::string pass, std::string url);
+        void setPostgres(std::string user, std::string pass, std::string url);
     };
 
-    struct IngestConfig : public StartupConfig {
+    class IngestConfig : public StartupConfig {
         std::string name;
         std::string type;
         std::string url;
-        std::string credentials;
+        std::string credentials; // TODO credentials should be managed according to the credential needs
+    public:
+        IngestConfig();
+        [[nodiscard]] std::string getName();
+        [[nodiscard]] std::string getType();
+        [[nodiscard]] std::string getUrl();
+        [[nodiscard]] std::string getCredentials();
+
+        void setName(std::string name);
+        void setType(std::string type);
+        void setUrl(std::string url);
+        void setCredentials(std::string credentials);
     };
 
-    struct StatsConfig : public StartupConfig {
+    class StatsConfig : public StartupConfig {
         // empty
+    public:
+        StatsConfig();
     };
 
     class Args {
