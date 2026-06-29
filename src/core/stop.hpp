@@ -1,6 +1,8 @@
 #pragma once
 #include <string>
 
+#include "gtfs/stop.hpp"
+
 namespace core {
     class Stop {
         std::string id;
@@ -12,6 +14,8 @@ namespace core {
     public:
         Stop(const std::string &id, const std::string &name, double longitude, double latitude,
              const std::string &source);
+
+        Stop(gtfs::Stop gtfs_stop, const std::string &source);
 
         Stop(Stop &&other) noexcept;
 

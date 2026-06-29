@@ -10,6 +10,14 @@ namespace core {
           source(source) {
     }
 
+    Stop::Stop(gtfs::Stop gtfs_stop, const std::string &source)
+        : id(gtfs_stop.get_id()),
+          name(gtfs_stop.get_name()),
+          longitude(gtfs_stop.get_point().getX()),
+          latitude(gtfs_stop.get_point().getY()),
+          source(source) {
+    }
+
     Stop::Stop(Stop &&other) noexcept
         : id(std::move(other.id)),
           name(std::move(other.name)),
