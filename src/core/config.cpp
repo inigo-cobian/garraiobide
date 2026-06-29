@@ -3,11 +3,11 @@
 #include "log_level.hpp"
 
 namespace core {
-    LaunchMode StartupConfig::getMode() {
+    LaunchMode StartupConfig::getMode() const {
         return mode;
     }
 
-    LogLevel StartupConfig::getLogLevel() {
+    LogLevel StartupConfig::getLogLevel() const {
         return logLevel;
     }
 
@@ -25,7 +25,8 @@ namespace core {
     }
 
     std::string StartupConfig::getPostgresConnectionString() const {
-        return std::string("host=" + pgHost + " port=" + pgPort + " dbname=garraiobide user=" + pgUser + " password=" + pgPass);
+        return std::string(
+            "host=" + pgHost + " port=" + pgPort + " dbname=garraiobide user=" + pgUser + " password=" + pgPass);
     }
 
     void StartupConfig::setMongo(std::string user, std::string pass, std::string url) {
@@ -45,19 +46,19 @@ namespace core {
         this->mode = Ingest;
     }
 
-    std::string IngestConfig::getName() {
+    std::string IngestConfig::getName() const {
         return name;
     }
 
-    std::string IngestConfig::getType() {
+    std::string IngestConfig::getType() const {
         return type;
     }
 
-    std::string IngestConfig::getUrl() {
+    std::string IngestConfig::getUrl() const {
         return url;
     }
 
-    std::string IngestConfig::getCredentials() {
+    std::string IngestConfig::getCredentials() const {
         return credentials;
     }
 

@@ -26,9 +26,9 @@ namespace core {
 
         ~StartupConfig() = default;
 
-        LaunchMode getMode();
+        LaunchMode getMode() const;
 
-        LogLevel getLogLevel();
+        LogLevel getLogLevel() const;
 
         void initializeLogger(LogLevel level);
 
@@ -59,13 +59,13 @@ namespace core {
 
         ~IngestConfig() = default;
 
-        [[nodiscard]] std::string getName();
+        [[nodiscard]] std::string getName() const;
 
-        [[nodiscard]] std::string getType();
+        [[nodiscard]] std::string getType() const;
 
-        [[nodiscard]] std::string getUrl();
+        [[nodiscard]] std::string getUrl() const;
 
-        [[nodiscard]] std::string getCredentials();
+        [[nodiscard]] std::string getCredentials() const;
 
         void setName(std::string name);
 
