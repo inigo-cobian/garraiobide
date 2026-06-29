@@ -24,9 +24,8 @@ namespace core {
                "/?authSource=admin&authMechanism=SCRAM-SHA-256";
     }
 
-    std::string StartupConfig::getPostgresUri() const {
-        // TODO manage credentials (?)
-        return this->pgUrl;
+    std::string StartupConfig::getPostgresConnectionString() const {
+        return std::string("host=" + pgHost + " port=" + pgPort + " dbname=garraiobide user=" + pgUser + " password=" + pgPass);
     }
 
     void StartupConfig::setMongo(std::string user, std::string pass, std::string url) {
@@ -35,10 +34,11 @@ namespace core {
         this->mongoUrl = url;
     }
 
-    void StartupConfig::setPostgres(std::string user, std::string pass, std::string url) {
+    void StartupConfig::setPostgres(std::string host, std::string port, std::string user, std::string pass) {
+        this->pgHost = host;
+        this->pgPort = port;
         this->pgUser = user;
         this->pgPass = pass;
-        this->pgUrl = url;
     }
 
     IngestConfig::IngestConfig() : StartupConfig() {

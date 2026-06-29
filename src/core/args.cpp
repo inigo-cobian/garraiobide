@@ -1,7 +1,6 @@
 #include "args.hpp"
 
 #include <args.hxx>
-#include <memory>
 
 namespace core {
     std::expected<ConfigVariant, std::runtime_error> Args::parse_args(int argc, char *argv[]) {
@@ -16,9 +15,10 @@ namespace core {
         args::ValueFlag<std::string> mongoUser(globalOpts, "user", "MongoDB username", {"mongo-user"});
         args::ValueFlag<std::string> mongoPass(globalOpts, "password", "MongoDB password", {"mongo-pass"});
         args::ValueFlag<std::string> mongoUrl(globalOpts, "url", "MongoDB URL", {"mongo-url"});
+        args::ValueFlag<std::string> pgHost(globalOpts, "host", "PostGIS host", {"pg-host"});
+        args::ValueFlag<std::string> pgPort(globalOpts, "port", "PostGIS port", {"pg-port"});
         args::ValueFlag<std::string> pgUser(globalOpts, "user", "PostGIS username", {"pg-user"});
         args::ValueFlag<std::string> pgPass(globalOpts, "password", "PostGIS password", {"pg-pass"});
-        args::ValueFlag<std::string> pgUrl(globalOpts, "url", "PostGIS URL", {"pg-url"});
 
         args::Group commands(parser, "commands", args::Group::Validators::AtMostOne);
 
@@ -32,7 +32,7 @@ namespace core {
                 //empty
                 s.Parse();
 
-                if (!mongoUser || !mongoPass || !mongoUrl || !pgUser || !pgPass || !pgUrl) {
+                if (!mongoUser || !mongoPass || !mongoUrl || !pgUser || !pgPass || !pgHost || !pgPort) {
                     throw std::runtime_error("Missing required arguments for 'run'");
                 }
             }
@@ -99,7 +99,7 @@ namespace core {
             cfg.initializeLogger(level);
             // TODO
             if (mongoUser) cfg.setMongo(args::get(mongoUser), args::get(mongoPass), args::get(mongoUrl));
-            if (pgUser) cfg.setPostgres(args::get(pgUser), args::get(pgPass), args::get(pgUrl));
+            if (pgUser) cfg.setPostgres(args::get(pgHost), args::get(pgPort), args::get(pgUser), args::get(pgPass));
         }, result);
         return result;
     }

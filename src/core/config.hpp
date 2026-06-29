@@ -16,9 +16,10 @@ namespace core {
         std::string mongoUser;
         std::string mongoPass;
         std::string mongoUrl;
+        std::string pgHost;
+        std::string pgPort;
         std::string pgUser;
         std::string pgPass;
-        std::string pgUrl;
 
     public:
         StartupConfig() = default;
@@ -33,11 +34,11 @@ namespace core {
 
         [[nodiscard]] std::string getMongoUri() const;
 
-        [[nodiscard]] std::string getPostgresUri() const;
+        [[nodiscard]] std::string getPostgresConnectionString() const;
 
         void setMongo(std::string user, std::string pass, std::string url);
 
-        void setPostgres(std::string user, std::string pass, std::string url);
+        void setPostgres(std::string host, std::string port, std::string user, std::string pass);
     };
 
     class RunConfig : public StartupConfig {
