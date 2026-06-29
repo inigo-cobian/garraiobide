@@ -20,9 +20,9 @@ namespace data {
 
         void insertStopInLine(const core::StopInLine &stopInLine);
 
-        [[nodiscard]] bool stopExists(const std::string &stop_id) const;
+        [[nodiscard]] bool stopExists(const std::string &stop_id, const std::string &source) const;
 
-        [[nodiscard]] bool lineExists(const std::string &line_id) const;
+        [[nodiscard]] bool lineExists(const std::string &line_id, const std::string &source) const;
 
     private:
         mutable pqxx::connection conn_;
