@@ -26,9 +26,9 @@ namespace core {
 
         ~StartupConfig() = default;
 
-        LaunchMode getMode() const;
+        [[nodiscard]] LaunchMode getMode() const;
 
-        LogLevel getLogLevel() const;
+        [[nodiscard]] LogLevel getLogLevel() const;
 
         void initializeLogger(LogLevel level);
 
