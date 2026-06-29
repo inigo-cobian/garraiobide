@@ -16,6 +16,14 @@ namespace core {
         LaunchMode mode;
         LogLevel logLevel;
 
+        // Database credentials
+        std::string mongoUser;
+        std::string mongoPass;
+        std::string mongoUrl;
+        std::string pgUser;
+        std::string pgPass;
+        std::string pgUrl;
+
     public:
         StartupConfig() = default;
 
@@ -26,28 +34,22 @@ namespace core {
         LogLevel getLogLevel();
 
         void initializeLogger(LogLevel level);
-    };
 
-    class RunConfig : public StartupConfig {
-        std::string mongoUser;
-        std::string mongoPass;
-        std::string mongoUrl;
-        std::string pgUser;
-        std::string pgPass;
-        std::string pgUrl;
+        [[nodiscard]] std::string getMongoUri() const;
 
-    public:
-        RunConfig();
-
-        ~RunConfig() = default;
-
-        [[nodiscard]] std::string getMongoUri();
-
-        [[nodiscard]] std::string getPostgresUri();
+        [[nodiscard]] std::string getPostgresUri() const;
 
         void setMongo(std::string user, std::string pass, std::string url);
 
         void setPostgres(std::string user, std::string pass, std::string url);
+    };
+
+    class RunConfig : public StartupConfig {
+        // empty
+    public:
+        RunConfig();
+
+        ~RunConfig() = default;
     };
 
     class IngestConfig : public StartupConfig {

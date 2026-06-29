@@ -20,23 +20,23 @@ namespace core {
         this->mode = Run;
     }
 
-    std::string RunConfig::getMongoUri() {
+    std::string StartupConfig::getMongoUri() const {
         return "mongodb://" + this->mongoUser + ":" + this->mongoPass + "@" + this->mongoUrl +
                "/?authSource=admin&authMechanism=SCRAM-SHA-256";
     }
 
-    std::string RunConfig::getPostgresUri() {
+    std::string StartupConfig::getPostgresUri() const {
         // TODO manage credentials (?)
         return this->pgUrl;
     }
 
-    void RunConfig::setMongo(std::string user, std::string pass, std::string url) {
+    void StartupConfig::setMongo(std::string user, std::string pass, std::string url) {
         this->mongoUser = user;
         this->mongoPass = pass;
         this->mongoUrl = url;
     }
 
-    void RunConfig::setPostgres(std::string user, std::string pass, std::string url) {
+    void StartupConfig::setPostgres(std::string user, std::string pass, std::string url) {
         this->pgUser = user;
         this->pgPass = pass;
         this->pgUrl = url;
@@ -91,6 +91,13 @@ namespace core {
                                               "Set the logging level (error, warning, info, debug)",
                                               {'l', "log"}, "info");
 
+        args::ValueFlag<std::string> mongoUser(globalOpts, "user", "MongoDB username", {"mongo-user"});
+        args::ValueFlag<std::string> mongoPass(globalOpts, "password", "MongoDB password", {"mongo-pass"});
+        args::ValueFlag<std::string> mongoUrl(globalOpts, "url", "MongoDB URL", {"mongo-url"});
+        args::ValueFlag<std::string> pgUser(globalOpts, "user", "PostGIS username", {"pg-user"});
+        args::ValueFlag<std::string> pgPass(globalOpts, "password", "PostGIS password", {"pg-pass"});
+        args::ValueFlag<std::string> pgUrl(globalOpts, "url", "PostGIS URL", {"pg-url"});
+
         args::Group commands(parser, "commands", args::Group::Validators::AtMostOne);
 
         ConfigVariant result;
@@ -100,23 +107,12 @@ namespace core {
             "run",
             "Run the main application",
             [&](args::Subparser &s) {
-                args::ValueFlag<std::string> mongoUser(s, "user", "MongoDB username", {"mongo-user"});
-                args::ValueFlag<std::string> mongoPass(s, "password", "MongoDB password", {"mongo-pass"});
-                args::ValueFlag<std::string> mongoUrl(s, "url", "MongoDB URL", {"mongo-url"});
-                args::ValueFlag<std::string> pgUser(s, "user", "PostGIS username", {"pg-user"});
-                args::ValueFlag<std::string> pgPass(s, "password", "PostGIS password", {"pg-pass"});
-                args::ValueFlag<std::string> pgUrl(s, "url", "PostGIS URL", {"pg-url"});
-
+                //empty
                 s.Parse();
 
                 if (!mongoUser || !mongoPass || !mongoUrl || !pgUser || !pgPass || !pgUrl) {
                     throw std::runtime_error("Missing required arguments for 'run'");
                 }
-
-                RunConfig cfg;
-                cfg.setMongo(args::get(mongoUser), args::get(mongoPass), args::get(mongoUrl));
-                cfg.setPostgres(args::get(pgUser), args::get(pgPass), args::get(pgUrl));
-                result = cfg;
             }
         );
 
@@ -175,8 +171,10 @@ namespace core {
 
         std::visit([&](auto &cfg) {
             cfg.initializeLogger(*level);
+            // TODO
+            if (mongoUser) cfg.setMongo(args::get(mongoUser), args::get(mongoPass), args::get(mongoUrl));
+            if (pgUser) cfg.setPostgres(args::get(pgUser), args::get(pgPass), args::get(pgUrl));
         }, result);
-
         return result;
     }
 }
