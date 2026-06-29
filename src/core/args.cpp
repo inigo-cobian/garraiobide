@@ -86,13 +86,17 @@ namespace core {
         if (!runCmd && !ingestCmd && !statsCmd) {
             return std::unexpected(std::runtime_error("No mode specified"));
         }
-        auto level = to_log_level(args::get(logLevel));
-        if (!level) {
-            return std::unexpected(level.error());
+        LogLevel level = LogLevel::Info;
+        if (!args::get(logLevel).empty()) {
+            auto levelOrError = to_log_level(args::get(logLevel));
+            if (!levelOrError.has_value()) {
+                return std::unexpected(levelOrError.error());
+            }
+            level = levelOrError.value();
         }
 
         std::visit([&](auto &cfg) {
-            cfg.initializeLogger(*level);
+            cfg.initializeLogger(level);
             // TODO
             if (mongoUser) cfg.setMongo(args::get(mongoUser), args::get(mongoPass), args::get(mongoUrl));
             if (pgUser) cfg.setPostgres(args::get(pgUser), args::get(pgPass), args::get(pgUrl));

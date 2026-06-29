@@ -10,7 +10,7 @@ namespace core {
     class StartupConfig {
     protected:
         LaunchMode mode;
-        LogLevel logLevel;
+        LogLevel logLevel = LogLevel::Info;
 
         // Database credentials
         std::string mongoUser;
