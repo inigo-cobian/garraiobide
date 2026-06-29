@@ -25,7 +25,7 @@ services:
     environment:
       POSTGRES_USER_FILE: /run/secrets/postgres_user
       POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
-      POSTGRES_DB: gis
+      POSTGRES_DB: garraiobide
     volumes:
       - postgis_data:/var/lib/postgresql/data
     secrets:
