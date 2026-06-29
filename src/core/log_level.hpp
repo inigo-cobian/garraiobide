@@ -1,5 +1,7 @@
 #pragma once
 #include <unordered_map>
+#include <expected>
+#include <stdexcept>
 
 enum class LogLevel {
     Debug, Info, Warn, Error

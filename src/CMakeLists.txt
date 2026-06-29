@@ -1,5 +1,6 @@
 add_library(garraiobide_core
     core/args.cpp
+    core/config.cpp
     core/logger.cpp
     core/resource.cpp
     core/stop.cpp
