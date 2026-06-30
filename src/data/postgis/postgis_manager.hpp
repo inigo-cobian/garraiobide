@@ -21,6 +21,11 @@ namespace data {
 
         void insertStopInTrip(const core::StopInTrip &stop_in_trip);
 
+        void insertTripInLine(const std::string &line_id,
+                              const std::string &line_source,
+                              const std::string &trip_id,
+                              const std::string &trip_source);
+
         void insertTrip(const core::Trip &trip);
 
         [[nodiscard]] bool stopExists(const std::string &stop_id, const std::string &source) const;

@@ -74,6 +74,19 @@ namespace data {
         CREATE INDEX IF NOT EXISTS trips_geom_idx ON trips USING GIST (geom);
         )");
 
+        txn.exec(R"(
+        CREATE TABLE IF NOT EXISTS trips_in_line (
+            line_id     TEXT NOT NULL,
+            line_source TEXT NOT NULL,
+            trip_id     TEXT NOT NULL,
+            trip_source TEXT NOT NULL,
+            PRIMARY KEY (line_id, line_source, trip_id, trip_source),
+            FOREIGN KEY (line_id, line_source) REFERENCES lines(id, source) ON DELETE CASCADE,
+            FOREIGN KEY (trip_id, trip_source) REFERENCES trips(id, source) ON DELETE CASCADE
+        );
+        CREATE INDEX IF NOT EXISTS til_line_idx ON trips_in_line(line_id, line_source);
+        CREATE INDEX IF NOT EXISTS til_trip_idx ON trips_in_line(trip_id, trip_source);
+    )");
         txn.commit();
     }
 
@@ -119,6 +132,18 @@ namespace data {
             stop_in_trip.get_trip_id(), source,
             stop_in_trip.get_stop_id(), source,
             stop_in_trip.get_order(), source
+        );
+        txn.commit();
+    }
+
+    void PostgisManager::insertTripInLine(const std::string &line_id, const std::string &line_source,
+                                          const std::string &trip_id, const std::string &trip_source) {
+        pqxx::work txn(conn_);
+        txn.exec_params(
+            "INSERT INTO trips_in_line (line_id, line_source, trip_id, trip_source) "
+            "VALUES ($1, $2, $3, $4) "
+            "ON CONFLICT (line_id, line_source, trip_id, trip_source) DO NOTHING;",
+            line_id, line_source, trip_id, trip_source
         );
         txn.commit();
     }
