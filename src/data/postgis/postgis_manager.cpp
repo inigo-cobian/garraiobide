@@ -6,6 +6,8 @@
 #include <stdexcept>
 #include <format>
 
+#include "core/trip.hpp"
+
 namespace data {
     PostgisManager::PostgisManager(const std::string &connection_string)
         : conn_(connection_string) {
@@ -62,6 +64,16 @@ namespace data {
         CREATE INDEX IF NOT EXISTS sil_stop_idx ON stop_in_line(stop_id, stop_source);
     )");
 
+        txn.exec(R"(
+        CREATE TABLE IF NOT EXISTS trips (
+            id TEXT NOT NULL,
+            geom GEOMETRY(LINESTRING, 4326),
+            source TEXT NOT NULL,
+            PRIMARY KEY (id, source)
+        );
+        CREATE INDEX IF NOT EXISTS trips_geom_idx ON trips USING GIST (geom);
+        )");
+
         txn.commit();
     }
 
@@ -111,6 +123,35 @@ namespace data {
         txn.commit();
     }
 
+    void PostgisManager::insertTrip(const core::Trip &trip) {
+        pqxx::work txn(conn_);
+        const OGRLineString &shape = trip.get_shape();
+
+        int numPoints = shape.getNumPoints();
+        if (numPoints < 2) {
+            throw std::runtime_error("Trip shape must have at least two points to form a line.");
+        }
+
+        std::ostringstream wkt;
+        wkt << "LINESTRING(";
+        for (int i = 0; i < numPoints; ++i) {
+            if (i > 0) wkt << ", ";
+            wkt << shape.getX(i) << " " << shape.getY(i); // lon lat order
+        }
+        wkt << ")";
+
+        std::string geom_expr = std::format("ST_SetSRID(ST_GeomFromText('{}'), 4326)", wkt.str());
+
+        txn.exec_params(
+            "INSERT INTO trips (id, geom, source) VALUES ($1, " + geom_expr + ", $2) "
+            "ON CONFLICT (id, source) DO UPDATE SET "
+            "geom = EXCLUDED.geom, source = EXCLUDED.source;",
+            trip.get_id(),
+            trip.get_source()
+        );
+        txn.commit();
+    }
+
     bool PostgisManager::stopExists(const std::string &stop_id, const std::string &source) const {
         pqxx::nontransaction txn(conn_);
         auto result = txn.exec_params(
@@ -125,6 +166,15 @@ namespace data {
         auto result = txn.exec_params(
             "SELECT 1 FROM lines WHERE id = $1 AND source = $2 LIMIT 1;",
             line_id, source
+        );
+        return !result.empty();
+    }
+
+    bool PostgisManager::tripExists(const std::string &trip_id, const std::string &source) const {
+        pqxx::nontransaction txn(conn_);
+        auto result = txn.exec_params(
+            "SELECT 1 FROM trips WHERE id = $1 AND source = $2 LIMIT 1;",
+            trip_id, source
         );
         return !result.empty();
     }

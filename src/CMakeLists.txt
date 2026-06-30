@@ -5,6 +5,7 @@ add_library(garraiobide_core
     core/resource.cpp
     core/stop.cpp
     core/line.cpp
+    core/trip.cpp
     core/stop_in_line.cpp
     data/mongo/mongodb_manager.cpp
     data/mongo/stop_repository.cpp
