@@ -8,19 +8,27 @@
 #include "gtfs_fields.hpp"
 #include "gtfs_files.hpp"
 #include "stop_time.hpp"
+#include "io/http_client.hpp"
+#include "io/temp_file.hpp"
 
 namespace gtfs {
-    void GtfsManager::load_feed(const std::string &zip_path) {
-        feeds.emplace_back(zip_path);
+    void GtfsManager::load_feed(const std::string &name, const std::string &gtfsUrl) {
+        auto gtfsZipFile = io::HttpClient::download(gtfsUrl);
+
+        auto tmpfile = io::TempFile(".zip");
+        std::ofstream out(tmpfile.getPath());
+        out << gtfsZipFile;
+
+        feeds.emplace_back(std::pair{name, io::ZipFile(tmpfile.getPath())});
     }
 
     std::vector<Stop> GtfsManager::get_stops() const {
         // TODO manage n feeds
-        auto content = feeds.at(0).get_file_content(files::STOPS);
+        auto content = feeds.at(0).second.get_file_content(files::STOPS);
         if (!content.has_value()) {
             // TODO throw error
         }
-        const auto& csv = content.value();
+        const auto &csv = content.value();
         const std::vector columns = {
             fields::stops::ID, fields::stops::NAME, fields::stops::LATITUDE, fields::stops::LONGITUDE,
             fields::stops::TYPE, fields::stops::PARENT
@@ -33,7 +41,7 @@ namespace gtfs {
             if (!line.at(fields::stops::LATITUDE).empty() && !line.at(fields::stops::LONGITUDE).empty()) {
                 try {
                     point = OGRPoint(std::stof(line.at(fields::stops::LATITUDE)),
-                    std::stof(line.at(fields::stops::LONGITUDE)));
+                                     std::stof(line.at(fields::stops::LONGITUDE)));
                 } catch (...) {
                     point.empty();
                 }
@@ -54,11 +62,11 @@ namespace gtfs {
     }
 
     std::vector<Agency> GtfsManager::get_agencies() const {
-        auto content = feeds.at(0).get_file_content(files::AGENCY);
+        auto content = feeds.at(0).second.get_file_content(files::AGENCY);
         if (!content.has_value()) {
             // TODO throw error
         }
-        const auto& csv = content.value();
+        const auto &csv = content.value();
         const std::vector columns = {fields::agency::ID, fields::agency::NAME};
         auto result = io::CsvReader::parse_file(csv, ',', columns);
 
@@ -71,11 +79,11 @@ namespace gtfs {
     }
 
     std::vector<Route> GtfsManager::get_routes() const {
-        auto content = feeds.at(0).get_file_content(files::ROUTES);
+        auto content = feeds.at(0).second.get_file_content(files::ROUTES);
         if (!content.has_value()) {
             // TODO throw error
         }
-        const auto& csv = content.value();
+        const auto &csv = content.value();
         const std::vector columns = {
             fields::routes::ID, fields::routes::SHORT_NAME, fields::routes::LONG_NAME, fields::routes::TYPE,
             fields::routes::COLOR, fields::routes::TEXT_COLOR
@@ -95,12 +103,12 @@ namespace gtfs {
     }
 
     std::optional<std::vector<Shape> > GtfsManager::get_shapes() const {
-        auto content = feeds.at(0).get_file_content(files::SHAPES);
+        auto content = feeds.at(0).second.get_file_content(files::SHAPES);
         if (!content.has_value()) {
             // TODO throw error
             return std::nullopt;
         }
-        const auto& csv = content.value();
+        const auto &csv = content.value();
         if (csv.empty()) {
             return std::nullopt;
         }
@@ -111,7 +119,7 @@ namespace gtfs {
 
         std::map<std::string, std::vector<std::pair<int, OGRPoint> > > shapes_map;
         for (auto row: result) {
-            const std::string& shape_id = row.at(fields::shapes::ID);
+            const std::string &shape_id = row.at(fields::shapes::ID);
             const int sequence = atoi(row.at(fields::shapes::SEQUENCE).c_str());
             const double lat = std::stod(row.at(fields::shapes::LATITUDE));
             const double lon = std::stod(row.at(fields::shapes::LONGITUDE));
@@ -140,12 +148,12 @@ namespace gtfs {
     }
 
     std::vector<Trip> GtfsManager::get_trips() const {
-        const auto content = feeds.at(0).get_file_content(files::TRIPS);
+        const auto content = feeds.at(0).second.get_file_content(files::TRIPS);
         if (!content.has_value()) {
             // TODO throw error
             return {};
         }
-        const auto& csv = content.value();
+        const auto &csv = content.value();
         if (csv.empty()) {
             return {};
         }
@@ -165,8 +173,8 @@ namespace gtfs {
             }
 
             std::optional<int> directionId = line.at(fields::trips::DIRECTION_ID).empty()
-                ? std::nullopt
-                : std::make_optional(std::stoi(line.at(fields::trips::DIRECTION_ID)));
+                                                 ? std::nullopt
+                                                 : std::make_optional(std::stoi(line.at(fields::trips::DIRECTION_ID)));
             auto trip = Trip(line.at(fields::trips::ID), line.at(fields::trips::ROUTE_ID),
                              line.at(fields::trips::HEADSIGN),
                              directionId, shape_id);
@@ -177,12 +185,12 @@ namespace gtfs {
     }
 
     std::vector<StopTime> GtfsManager::get_stop_times() const {
-        auto content = feeds.at(0).get_file_content(files::STOP_TIMES);
+        auto content = feeds.at(0).second.get_file_content(files::STOP_TIMES);
         if (!content.has_value()) {
             // TODO throw error
             return {};
         }
-        const auto& csv = content.value();
+        const auto &csv = content.value();
         if (csv.empty()) {
             return {};
         }
@@ -208,5 +216,4 @@ namespace gtfs {
         }
         return stop_times;
     }
-
 }

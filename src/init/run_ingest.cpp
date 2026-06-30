@@ -23,14 +23,8 @@ namespace init {
 
             if (config.getType() == "gtfs") {
                 gtfs::GtfsManager gtfs_manager{};
-                std::string gtfsUrl = config.getUrl();
-                auto gtfsZipFile = io::HttpClient::download(gtfsUrl);
+                gtfs_manager.load_feed(config.getName(), config.getUrl());
 
-                auto tmpfile = io::TempFile(".zip");
-                std::ofstream out(tmpfile.getPath());
-                out << gtfsZipFile;
-
-                gtfs_manager.load_feed(tmpfile.getPath());
                 auto gtfs_stops = gtfs_manager.get_stops();
                 std::vector<core::Stop> stops{};
                 for (auto &gtfs_stop: gtfs_stops) {

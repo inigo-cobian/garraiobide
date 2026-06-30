@@ -11,9 +11,11 @@
 #include "trip.hpp"
 
 namespace gtfs {
-     class GtfsManager {
+    class GtfsManager {
+        std::vector<std::pair<std::string, io::ZipFile>> feeds;
+
     public:
-        void load_feed(const std::string &zip_path);
+        void load_feed(const std::string &name, const std::string &gtfsUrl);
 
         [[nodiscard]] std::vector<Stop> get_stops() const;
 
@@ -21,13 +23,10 @@ namespace gtfs {
 
         [[nodiscard]] std::vector<Route> get_routes() const;
 
-        [[nodiscard]] std::optional<std::vector<Shape>> get_shapes() const;
+        [[nodiscard]] std::optional<std::vector<Shape> > get_shapes() const;
 
         [[nodiscard]] std::vector<Trip> get_trips() const;
 
         [[nodiscard]] std::vector<StopTime> get_stop_times() const;
-
-    private:
-        std::vector<io::ZipFile> feeds;
     };
 }
