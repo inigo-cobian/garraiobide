@@ -5,7 +5,7 @@
 
 #include "core/resource.hpp"
 #include "core/stop.hpp"
-#include "core/stop_in_line.hpp"
+#include "core/stop_in_trip.hpp"
 #include "core/trip.hpp"
 #include "data/mongo/mongodb_manager.hpp"
 #include "data/postgis/postgis_manager.hpp"
@@ -64,9 +64,9 @@ namespace init {
                     gtfs_trip.build_ordered_stops(gtfs_stops, gtfs_stop_times);
                     std::cout << trip.get_id() << ":" << gtfs_trip.get_headsign() << std::endl;
                     for (const auto &ordered_stop: gtfs_trip.get_ordered_stops()) {
-                        core::StopInLine stopInLine(ordered_stop.first, ordered_stop.second.get_id(),
+                        core::StopInTrip stopInLine(ordered_stop.first, ordered_stop.second.get_id(),
                                                     gtfs_trip.get_id(), config.getName());
-                        pgManager.insertStopInLine(stopInLine);
+                        pgManager.insertStopInTrip(stopInLine);
                     }
                 }
             }

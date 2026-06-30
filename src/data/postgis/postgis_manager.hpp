@@ -6,7 +6,7 @@
 namespace core {
     class Stop;
     class Line;
-    class StopInLine;
+    class StopInTrip;
     class Trip;
 }
 
@@ -19,7 +19,7 @@ namespace data {
 
         void insertLine(const core::Line &line);
 
-        void insertStopInLine(const core::StopInLine &stopInLine);
+        void insertStopInTrip(const core::StopInTrip &stop_in_trip);
 
         void insertTrip(const core::Trip &trip);
 

@@ -6,7 +6,7 @@ add_library(garraiobide_core
     core/stop.cpp
     core/line.cpp
     core/trip.cpp
-    core/stop_in_line.cpp
+        core/stop_in_trip.cpp
     data/mongo/mongodb_manager.cpp
     data/mongo/stop_repository.cpp
     data/postgis/postgis_manager.cpp

@@ -1,7 +1,7 @@
 #include "postgis_manager.hpp"
 #include "core/stop.hpp"
 #include "core/line.hpp"
-#include "core/stop_in_line.hpp"
+#include "core/stop_in_trip.hpp"
 #include "ui/color.hpp"
 #include <stdexcept>
 #include <format>
@@ -49,19 +49,19 @@ namespace data {
     )");
 
         txn.exec(R"(
-        CREATE TABLE IF NOT EXISTS stop_in_line (
-            line_id TEXT NOT NULL,
-            line_source TEXT NOT NULL,
+        CREATE TABLE IF NOT EXISTS stop_in_trip (
+            trip_id TEXT NOT NULL,
+            trip_source TEXT NOT NULL,
             stop_id TEXT NOT NULL,
             stop_source TEXT NOT NULL,
             stop_order INTEGER NOT NULL,
             source TEXT,   -- source of the relationship itself (optional)
-            PRIMARY KEY (line_id, line_source, stop_id, stop_source),
-            FOREIGN KEY (line_id, line_source) REFERENCES lines(id, source) ON DELETE CASCADE,
+            PRIMARY KEY (trip_id, trip_source, stop_id, stop_source),
+            FOREIGN KEY (trip_id, trip_source) REFERENCES trips(id, source) ON DELETE CASCADE,
             FOREIGN KEY (stop_id, stop_source) REFERENCES stops(id, source) ON DELETE CASCADE
         );
-        CREATE INDEX IF NOT EXISTS sil_line_idx ON stop_in_line(line_id, line_source);
-        CREATE INDEX IF NOT EXISTS sil_stop_idx ON stop_in_line(stop_id, stop_source);
+        CREATE INDEX IF NOT EXISTS sit_trip_idx ON stop_in_trip(trip_id, trip_source);
+        CREATE INDEX IF NOT EXISTS sit_stop_idx ON stop_in_trip(stop_id, stop_source);
     )");
 
         txn.exec(R"(
@@ -108,17 +108,17 @@ namespace data {
         txn.commit();
     }
 
-    void PostgisManager::insertStopInLine(const core::StopInLine &sil) {
+    void PostgisManager::insertStopInTrip(const core::StopInTrip &stop_in_trip) {
         pqxx::work txn(conn_);
-        std::string source = sil.get_source();
+        std::string source = stop_in_trip.get_source();
         txn.exec_params(
-            "INSERT INTO stop_in_line (line_id, line_source, stop_id, stop_source, stop_order, source) "
+            "INSERT INTO stop_in_trip (trip_id, trip_source, stop_id, stop_source, stop_order, source) "
             "VALUES ($1, $2, $3, $4, $5, $6) "
-            "ON CONFLICT (line_id, line_source, stop_id, stop_source) DO UPDATE SET "
+            "ON CONFLICT (trip_id, trip_source, stop_id, stop_source) DO UPDATE SET "
             "stop_order = EXCLUDED.stop_order, source = EXCLUDED.source;",
-            sil.get_line_id(), source,
-            sil.get_stop_id(), source,
-            sil.get_order(), source
+            stop_in_trip.get_trip_id(), source,
+            stop_in_trip.get_stop_id(), source,
+            stop_in_trip.get_order(), source
         );
         txn.commit();
     }
