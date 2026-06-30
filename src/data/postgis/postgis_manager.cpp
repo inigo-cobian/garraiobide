@@ -90,7 +90,7 @@ namespace data {
         txn.commit();
     }
 
-    void PostgisManager::insertStop(const core::Stop &stop) {
+    void PostgisManager::insertStop(const core::Stop &stop) const {
         pqxx::work txn(conn_);
         // Convert lon/lat to PostGIS point (longitude = X, latitude = Y)
         std::string geom_expr = std::format(
@@ -106,7 +106,7 @@ namespace data {
         txn.commit();
     }
 
-    void PostgisManager::insertLine(const core::Line &line) {
+    void PostgisManager::insertLine(const core::Line &line) const {
         pqxx::work txn(conn_);
         txn.exec_params(
             "INSERT INTO lines (id, name, color, text_color, source) VALUES ($1, $2, $3, $4, $5) "
@@ -121,7 +121,7 @@ namespace data {
         txn.commit();
     }
 
-    void PostgisManager::insertStopInTrip(const core::StopInTrip &stop_in_trip) {
+    void PostgisManager::insertStopInTrip(const core::StopInTrip &stop_in_trip) const {
         pqxx::work txn(conn_);
         std::string source = stop_in_trip.get_source();
         txn.exec_params(
@@ -137,7 +137,7 @@ namespace data {
     }
 
     void PostgisManager::insertTripInLine(const std::string &line_id, const std::string &line_source,
-                                          const std::string &trip_id, const std::string &trip_source) {
+                                          const std::string &trip_id, const std::string &trip_source) const {
         pqxx::work txn(conn_);
         txn.exec_params(
             "INSERT INTO trips_in_line (line_id, line_source, trip_id, trip_source) "
@@ -148,7 +148,7 @@ namespace data {
         txn.commit();
     }
 
-    void PostgisManager::insertTrip(const core::Trip &trip) {
+    void PostgisManager::insertTrip(const core::Trip &trip) const {
         pqxx::work txn(conn_);
         const OGRLineString &shape = trip.get_shape();
 

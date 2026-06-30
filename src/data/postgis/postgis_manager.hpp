@@ -15,18 +15,18 @@ namespace data {
     public:
         explicit PostgisManager(const std::string &connection_string);
 
-        void insertStop(const core::Stop &stop);
+        void insertStop(const core::Stop &stop) const;
 
-        void insertLine(const core::Line &line);
+        void insertLine(const core::Line &line) const;
 
-        void insertStopInTrip(const core::StopInTrip &stop_in_trip);
+        void insertStopInTrip(const core::StopInTrip &stop_in_trip) const;
 
         void insertTripInLine(const std::string &line_id,
                               const std::string &line_source,
                               const std::string &trip_id,
-                              const std::string &trip_source);
+                              const std::string &trip_source) const;
 
-        void insertTrip(const core::Trip &trip);
+        void insertTrip(const core::Trip &trip) const;
 
         [[nodiscard]] bool stopExists(const std::string &stop_id, const std::string &source) const;
 
