@@ -51,11 +51,11 @@ jobs:
         run: |
           mkdir -p build
           cd build
-          export CC=gcc-14
-          export CXX=g++-14
           conan install .. --build=missing \
             -pr:h=../.conan/profiles/linux_gcc14_debug \
             -pr:b=../.conan/profiles/linux_gcc14_debug
+          export CC=gcc-14
+          export CXX=g++-14
 
       - name: Configure CMake with coverage flags
         run: |
