@@ -10,7 +10,7 @@ on:
 
 jobs:
   build-and-test:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
 
     steps:
       - name: Checkout code
@@ -19,7 +19,7 @@ jobs:
       - name: Install system dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y g++-12
+          sudo apt-get install -y g++-14
 
       - name: Setup Python
         uses: actions/setup-python@v4
@@ -33,26 +33,30 @@ jobs:
       - name: Create Conan profile
         run: |
           mkdir -p .conan/profiles
-          cat > .conan/profiles/linux_gcc12_debug <<EOF
+          cat > .conan/profiles/linux_gcc14_debug <<EOF
           [settings]
           arch=x86_64
           build_type=Debug
           compiler=gcc
-          compiler.version=12
+          compiler.version=14
           compiler.libcxx=libstdc++11
           compiler.cppstd=gnu23
           os=Linux
+          [conf]
+          tools.build:cxxflags=["-std=gnu++23"]
+          tools.build:cflags=["-std=gnu++23"]
+          tools.build:compiler_executables={"cxx": "g++-14", "cc": "gcc-14"}
           EOF
 
       - name: Install dependencies with Conan
         run: |
           mkdir -p build
           cd build
-          export CC=gcc-12
-          export CXX=g++-12
+          export CC=gcc-14
+          export CXX=g++-14
           conan install .. --build=missing \
-            -pr:h=../.conan/profiles/linux_gcc12_debug \
-            -pr:b=../.conan/profiles/linux_gcc12_debug
+            -pr:h=../.conan/profiles/linux_gcc14_debug \
+            -pr:b=../.conan/profiles/linux_gcc14_debug
 
       - name: Configure CMake with coverage flags
         run: |
@@ -60,9 +64,9 @@ jobs:
           cmake .. \
             -DCMAKE_TOOLCHAIN_FILE=generators/conan_toolchain.cmake \
             -DCMAKE_BUILD_TYPE=Debug \
-            -DCMAKE_CXX_COMPILER=g++-12 \
-            -DCMAKE_C_COMPILER=gcc-12 \
-            -DCMAKE_CXX_FLAGS="-fprofile-arcs -ftest-coverage" \
+            -DCMAKE_CXX_COMPILER=g++-14 \
+            -DCMAKE_C_COMPILER=gcc-14 \
+            -DCMAKE_CXX_FLAGS="-fprofile-arcs -ftest-coverage -std=gnu++23" \
             -DCMAKE_EXE_LINKER_FLAGS="-fprofile-arcs -ftest-coverage"
 
       - name: Build the project
@@ -79,7 +83,7 @@ jobs:
         run: |
           cd build
           # Use gcov-12 to match the compiler
-          gcovr --root .. --gcov-executable "gcov-12" --xml coverage.xml
+          gcovr --root .. --gcov-executable "gcov-14" --xml coverage.xml
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v3
