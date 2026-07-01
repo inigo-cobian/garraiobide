@@ -5,14 +5,24 @@
 #include <memory>
 
 namespace data {
+    /**
+     * @brief Manages a connection pool to MongoDB and provides access to collections.
+     *
+     * Configurable with URI, database name, and (in the future) pool size and SSL.
+     * Owns a connection pool and exposes the database object.
+     */
     class MongoDBManager {
     public:
         struct Config {
-            std::string uri = "mongodb://localhost:27017";
-            std::string database = "garraiobide";
+            std::string uri = "mongodb://localhost:27017"; ///< Connection URI.
+            std::string database = "garraiobide"; ///< Default database name.
             // TODO add max pool, add SSL, auth, etc.
         };
 
+        /**
+         * @brief Construct a new MongoDBManager and initialize the pool.
+         * @param cfg The connection configuration.
+         */
         explicit MongoDBManager(Config cfg);
 
         ~MongoDBManager() = default;
@@ -25,7 +35,12 @@ namespace data {
 
         MongoDBManager &operator=(MongoDBManager &&) noexcept = default;
 
-        [[nodiscard]] mongocxx::collection getCollection(std::string_view coll_name) const;
+        /**
+         * @brief Obtain a collection from the configured database.
+         * @param collection_name Name of the collection.
+         * @return mongocxx::collection A collection object (obtained from the pool).
+         */
+        [[nodiscard]] mongocxx::collection getCollection(std::string_view collection_name) const;
 
     private:
         Config config_;

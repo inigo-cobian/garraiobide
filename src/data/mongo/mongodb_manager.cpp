@@ -16,7 +16,7 @@ namespace data {
         db_ = (*client)[config_.database];
     }
 
-    mongocxx::collection MongoDBManager::getCollection(std::string_view coll_name) const {
-        return db_[std::string(coll_name)];
+    mongocxx::collection MongoDBManager::getCollection(std::string_view collection_name) const {
+        return db_[std::string(collection_name)];
     }
 }

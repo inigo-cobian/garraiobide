@@ -2,6 +2,11 @@
 #include <string>
 
 namespace core {
+    /**
+     * @brief Represents the association of a Stop with a Trip at a specific order.
+     *
+     * Used to model stop sequences (from stop times) within a trip.
+     */
     class StopInTrip {
         int order;
         std::string stopId;
@@ -9,6 +14,13 @@ namespace core {
         std::string source;
 
     public:
+        /**
+         * @brief Construct a StopInTrip relation.
+         * @param order Sequence number.
+         * @param stop_id ID of the stop.
+         * @param trip_id ID of the trip.
+         * @param source Source identifier.
+         */
         [[nodiscard]] StopInTrip(int order, const std::string &stop_id, const std::string &trip_id,
                                  const std::string &source);
 
