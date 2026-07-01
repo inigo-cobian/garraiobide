@@ -44,7 +44,6 @@ jobs:
           os=Linux
           [conf]
           tools.build:cxxflags=["-std=gnu++23"]
-          tools.build:cflags=["-std=gnu++23"]
           tools.build:compiler_executables={"cxx": "g++-14", "cc": "gcc-14"}
           EOF
 
