@@ -1,0 +1,81 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+    # TODO setup the options
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-22.04
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y g++-12
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Install Conan and gcovr
+        run: |
+          pip install conan gcovr
+
+      - name: Configure Conan profile
+        run: |
+          conan profile detect --force
+          conan profile update settings.compiler=gcc profile1
+          conan profile update settings.compiler.version=12 profile1
+          conan profile update settings.compiler.libcxx=libstdc++11 profile1
+          conan profile update settings.build_type=Debug profile1
+
+      - name: Install dependencies with Conan
+        run: |
+          mkdir -p build
+          cd build
+          conan install .. --build=missing -pr=profile1
+
+      - name: Configure CMake with coverage flags
+        run: |
+          cd build
+          cmake .. \
+            -DCMAKE_TOOLCHAIN_FILE=generators/conan_toolchain.cmake \
+            -DCMAKE_BUILD_TYPE=Debug \
+            -DCMAKE_CXX_COMPILER=g++-12 \
+            -DCMAKE_C_COMPILER=gcc-12 \
+            -DCMAKE_CXX_FLAGS="-fprofile-arcs -ftest-coverage" \
+            -DCMAKE_EXE_LINKER_FLAGS="-fprofile-arcs -ftest-coverage"
+
+      - name: Build the project
+        run: |
+          cd build
+          cmake --build . -- -j$(nproc)
+
+      - name: Run tests
+        run: |
+          cd build
+          ctest --output-on-failure -C Debug
+
+      - name: Generate coverage report
+        run: |
+          cd build
+          # Use gcov-12 to match the compiler
+          gcovr --root .. --gcov-executable "gcov-12" --xml coverage.xml
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v3
+        with:
+          file: build/coverage.xml
+          flags: unittests
+          name: codecov-umbrella
+          fail_ci_if_error: false
+          token: ${{ secrets.CODECOV_TOKEN }}
