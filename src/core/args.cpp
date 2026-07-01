@@ -61,7 +61,8 @@ namespace core {
 
                 s.Parse();
 
-                if (!resourceName || !resourceType || !resourceUrl || !resourceCreds) {
+                if (!resourceName || !resourceType || !resourceUrl || !resourceCreds
+                    || !mongoUser || !mongoPass || !mongoUrl || !pgUser || !pgPass || !pgHost || !pgPort) {
                     throw std::runtime_error("Error: Missing required arguments for 'ingest'.");
                 }
 
@@ -80,7 +81,10 @@ namespace core {
         } catch (const args::Help &) {
             std::cout << parser;
         } catch (const args::ParseError &e) {
-            throw std::runtime_error(e.what() + parser);
+            return std::unexpected(std::runtime_error(e.what() + parser));
+        } catch (const std::exception &e) {
+            // TODO see where to manage it as unexpected and where as an exception
+            throw std::runtime_error(e.what());
         }
 
         if (!runCmd && !ingestCmd && !statsCmd) {

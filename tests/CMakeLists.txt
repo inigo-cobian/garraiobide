@@ -10,6 +10,8 @@ add_executable(garraiobide_tests
         io/main_test.cpp
         io/zip_file_test.cpp
         io/geojson_reader_test.cpp
+        core/args_test.cpp
+        core/config_test.cpp
         core/resource_test.cpp
         gtfs/gtfs_manager_test.cpp
 )
