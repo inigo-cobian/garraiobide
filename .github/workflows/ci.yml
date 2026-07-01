@@ -53,7 +53,8 @@ jobs:
           cd build
           conan install .. --build=missing \
             -pr:h=../.conan/profiles/linux_gcc14_debug \
-            -pr:b=../.conan/profiles/linux_gcc14_debug
+            -pr:b=../.conan/profiles/linux_gcc14_debug \
+            -g CMakeToolchain -g CMakeDeps
           export CC=gcc-14
           export CXX=g++-14
 
