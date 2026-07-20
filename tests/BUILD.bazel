@@ -1,0 +1,23 @@
+load("@rules_cc//cc:cc_test.bzl", "cc_test")
+
+cc_test(
+    name = "layer_service_test",
+    srcs = ["layer_service_test.cc"],
+    deps = [
+        "//src/adapters/ingestion:mock_ingestion",
+        "//src/adapters/persistence:mock_persistence",
+        "//src/adapters/ui:mock_presentation",
+        "//src/app",
+        "//src/core/domain",
+        "@googletest//:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "domain_test",
+    srcs = ["domain_test.cc"],
+    deps = [
+        "//src/core/domain",
+        "@googletest//:gtest_main",
+    ],
+)

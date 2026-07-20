@@ -1,0 +1,15 @@
+load("@rules_cc//cc:cc_library.bzl", "cc_library")
+
+cc_library(
+    name = "domain",
+    srcs = ["layer.cc"],
+    hdrs = [
+        "bounding_box.h",
+        "coordinate.h",
+        "geo_feature.h",
+        "geometry.h",
+        "layer.h",
+        "properties.h",
+    ],
+    visibility = ["//visibility:public"],
+)

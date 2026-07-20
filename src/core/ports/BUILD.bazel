@@ -1,0 +1,15 @@
+load("@rules_cc//cc:cc_library.bzl", "cc_library")
+
+cc_library(
+    name = "ports",
+    hdrs = [
+        "cli_port.h",
+        "data_ingestion_port.h",
+        "persistence_port.h",
+        "presentation_port.h",
+    ],
+    visibility = ["//visibility:public"],
+    deps = [
+        "//src/core/domain",
+    ],
+)

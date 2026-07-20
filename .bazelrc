@@ -1,0 +1,14 @@
+# C++23 with Clang
+build --action_env=CC=clang
+build --action_env=CXX=clang++
+build --cxxopt=-std=c++23
+build --cxxopt=-Wall
+build --cxxopt=-Wextra
+build --cxxopt=-Wpedantic
+build --host_cxxopt=-std=c++23
+
+# Compatibility: auto-load removed native rules for external deps
+build --incompatible_autoload_externally=+cc_library,+cc_test,+cc_binary
+
+# Test output
+test --test_output=errors

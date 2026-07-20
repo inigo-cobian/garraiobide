@@ -1,0 +1,12 @@
+load("@rules_cc//cc:cc_library.bzl", "cc_library")
+
+cc_library(
+    name = "app",
+    srcs = ["layer_service.cc"],
+    hdrs = ["layer_service.h"],
+    visibility = ["//visibility:public"],
+    deps = [
+        "//src/core/domain",
+        "//src/core/ports",
+    ],
+)
