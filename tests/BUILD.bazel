@@ -21,3 +21,12 @@ cc_test(
         "@googletest//:gtest_main",
     ],
 )
+
+cc_test(
+    name = "parse_args_test",
+    srcs = ["parse_args_test.cc"],
+    deps = [
+        "//src/app:parse_args",
+        "@googletest//:gtest_main",
+    ],
+)

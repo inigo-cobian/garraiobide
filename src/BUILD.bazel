@@ -8,6 +8,7 @@ cc_binary(
         "//src/adapters/persistence:mock_persistence",
         "//src/adapters/ui:mock_presentation",
         "//src/app",
+        "//src/app:parse_args",
         "//src/core/domain",
     ],
 )

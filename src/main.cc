@@ -1,16 +1,34 @@
+#include <cstdlib>
 #include <iostream>
 
 #include "src/adapters/ingestion/mock_ingestion_adapter.h"
 #include "src/adapters/persistence/mock_persistence_adapter.h"
 #include "src/adapters/ui/mock_presentation_adapter.h"
+#include "src/app/app_config.h"
 #include "src/app/layer_service.h"
+#include "src/app/parse_args.h"
 #include "src/core/domain/geo_feature.h"
 #include "src/core/domain/geometry.h"
 
 using namespace garraiobide;
 
-int main() {
-    // Wire up mock adapters.
+int main(int argc, char* argv[]) {
+    // ── CLI argument parsing ───────────────────────────────────────────────
+    auto result = app::parse_args(argc, argv);
+    if (!result) {
+        return result.error() == app::ParseResult::kHelpRequested
+                   ? EXIT_SUCCESS
+                   : EXIT_FAILURE;
+    }
+    auto config = std::move(*result);
+
+    // Placeholder: config and services will consume AppConfig later.
+    std::cout << "Config file : " << config.config_path << "\n";
+    std::cout << "Log level   : " << config.log_level << "\n";
+    std::cout << "Mongo       : " << config.mongo_host << ":"
+              << config.mongo_port << "\n";
+
+    // ── Wire up mock adapters ──────────────────────────────────────────────
     adapters::ingestion::MockIngestionAdapter ingestion;
     adapters::persistence::MockPersistenceAdapter persistence;
     adapters::ui::MockPresentationAdapter presentation;
@@ -37,12 +55,12 @@ int main() {
     });
 
     // Import a layer.
-    std::cout << "=== Importing layer 'bilbao_poi' ===\n";
+    std::cout << "\n=== Importing layer 'bilbao_poi' ===\n";
     auto import_result = service.import_layer(
         "bilbao_poi", "bilbao_pois.geojson", core::domain::SpatialScale::Urban);
     if (!import_result) {
         std::cerr << "Import failed.\n";
-        return 1;
+        return EXIT_FAILURE;
     }
 
     // List layers.
@@ -93,5 +111,5 @@ int main() {
         std::cout << "  [error] " << err << "\n";
     }
 
-    return 0;
+    return EXIT_SUCCESS;
 }

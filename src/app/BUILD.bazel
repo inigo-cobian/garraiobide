@@ -3,10 +3,24 @@ load("@rules_cc//cc:cc_library.bzl", "cc_library")
 cc_library(
     name = "app",
     srcs = ["layer_service.cc"],
-    hdrs = ["layer_service.h"],
+    hdrs = [
+        "app_config.h",
+        "layer_service.h",
+    ],
     visibility = ["//visibility:public"],
     deps = [
         "//src/core/domain",
         "//src/core/ports",
+    ],
+)
+
+cc_library(
+    name = "parse_args",
+    srcs = ["parse_args.cc"],
+    hdrs = ["parse_args.h"],
+    visibility = ["//visibility:public"],
+    deps = [
+        ":app",
+        "@taywee_args//:args",
     ],
 )
