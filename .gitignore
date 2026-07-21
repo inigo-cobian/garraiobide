@@ -87,3 +87,7 @@ cmake-build-*
 /.ijwb/
 /.aswb/
 /.clwb/
+
+# Docker
+docker/secrets
+
