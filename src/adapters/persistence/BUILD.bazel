@@ -10,3 +10,15 @@ cc_library(
         "//src/core/ports",
     ],
 )
+
+cc_library(
+    name = "file_persistence",
+    srcs = ["file_persistence_adapter.cc"],
+    hdrs = ["file_persistence_adapter.h"],
+    visibility = ["//visibility:public"],
+    deps = [
+        "//src/core/domain",
+        "//src/core/ports",
+        "@nlohmann_json//:json",
+    ],
+)

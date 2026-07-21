@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Garraiobide - Map Viewer</title>
+
+  <!-- Leaflet CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+
+  <!-- Leaflet.draw CSS -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css">
+
+  <!-- Application CSS -->
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="map" role="application" aria-label="Interactive map"></div>
+
+  <div id="layer-control" class="layer-control" aria-label="Layer selector">
+    <h2 class="layer-control__title">Layers</h2>
+    <ul id="layer-list" class="layer-control__list"></ul>
+  </div>
+
+  <div id="notifications" class="notifications" aria-live="polite" aria-atomic="true"></div>
+
+  <!-- Leaflet JS -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <!-- Leaflet.draw JS -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
+
+  <!-- Application JS -->
+  <script src="app.js"></script>
+</body>
+</html>

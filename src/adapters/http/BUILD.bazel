@@ -1,0 +1,24 @@
+load("@rules_cc//cc:cc_library.bzl", "cc_library")
+
+cc_library(
+    name = "geojson_serializer",
+    srcs = ["geojson_serializer.cc"],
+    hdrs = ["geojson_serializer.h"],
+    visibility = ["//visibility:public"],
+    deps = [
+        "//src/core/domain",
+        "@nlohmann_json//:json",
+    ],
+)
+
+cc_library(
+    name = "http_adapter",
+    srcs = ["http_adapter.cc"],
+    hdrs = ["http_adapter.h"],
+    visibility = ["//visibility:public"],
+    deps = [
+        "//src/app",
+        ":geojson_serializer",
+        "@cpp_httplib//:httplib",
+    ],
+)

@@ -30,3 +30,63 @@ cc_test(
         "@googletest//:gtest_main",
     ],
 )
+
+cc_test(
+    name = "file_persistence_property_test",
+    srcs = ["file_persistence_property_test.cc"],
+    deps = [
+        "//src/adapters/persistence:file_persistence",
+        "//src/core/domain",
+        "//src/core/ports",
+        "@googletest//:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "file_persistence_test",
+    srcs = ["file_persistence_test.cc"],
+    deps = [
+        "//src/adapters/persistence:file_persistence",
+        "//src/core/domain",
+        "//src/core/ports",
+        "@googletest//:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "geojson_serializer_property_test",
+    srcs = ["geojson_serializer_property_test.cc"],
+    deps = [
+        "//src/adapters/http:geojson_serializer",
+        "//src/core/domain",
+        "@googletest//:gtest_main",
+        "@nlohmann_json//:json",
+    ],
+)
+
+cc_test(
+    name = "geojson_serializer_test",
+    srcs = ["geojson_serializer_test.cc"],
+    deps = [
+        "//src/adapters/http:geojson_serializer",
+        "//src/core/domain",
+        "@googletest//:gtest_main",
+        "@nlohmann_json//:json",
+    ],
+)
+
+cc_test(
+    name = "http_adapter_test",
+    srcs = ["http_adapter_test.cc"],
+    deps = [
+        "//src/adapters/http:http_adapter",
+        "//src/adapters/ingestion:mock_ingestion",
+        "//src/adapters/persistence:mock_persistence",
+        "//src/adapters/ui:mock_presentation",
+        "//src/app",
+        "//src/core/domain",
+        "@cpp_httplib//:httplib",
+        "@googletest//:gtest_main",
+        "@nlohmann_json//:json",
+    ],
+)

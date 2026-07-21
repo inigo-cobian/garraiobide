@@ -24,3 +24,37 @@ cc_library(
 )
 """,
 )
+
+# cpp-httplib v0.18.3 - header-only HTTP/HTTPS library
+http_archive(
+    name = "cpp_httplib",
+    urls = ["https://github.com/yhirose/cpp-httplib/archive/refs/tags/v0.18.3.tar.gz"],
+    strip_prefix = "cpp-httplib-0.18.3",
+    build_file_content = """
+load("@rules_cc//cc:cc_library.bzl", "cc_library")
+
+cc_library(
+    name = "httplib",
+    hdrs = ["httplib.h"],
+    includes = ["."],
+    visibility = ["//visibility:public"],
+)
+""",
+)
+
+# nlohmann/json v3.11.3 - header-only JSON library
+http_archive(
+    name = "nlohmann_json",
+    urls = ["https://github.com/nlohmann/json/archive/refs/tags/v3.11.3.tar.gz"],
+    strip_prefix = "json-3.11.3",
+    build_file_content = """
+load("@rules_cc//cc:cc_library.bzl", "cc_library")
+
+cc_library(
+    name = "json",
+    hdrs = glob(["include/nlohmann/**/*.hpp"]),
+    includes = ["include"],
+    visibility = ["//visibility:public"],
+)
+""",
+)
