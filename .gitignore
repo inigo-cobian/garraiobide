@@ -89,5 +89,7 @@ cmake-build-*
 /.clwb/
 
 # Docker
-docker/secrets
+docker/secrets/
 
+# Kiro
+.kiro/
