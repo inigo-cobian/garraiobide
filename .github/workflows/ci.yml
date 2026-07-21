@@ -18,10 +18,20 @@ jobs:
         run: bazel build //...
 
       - name: Test with Coverage
-        run: bazel coverage //tests:layer_service_test //tests:domain_test
+        run: |
+          bazel coverage \
+            --combined_report=lcov \
+            --instrumentation_filter="//src[/:]" \
+            //tests:all
+
+      - name: Prepare Coverage Report
+        run: |
+          mkdir -p bazel-testlogs/tests
+          cp "$(bazel info output_path)/_coverage/_coverage_report.dat" bazel-testlogs/tests/coverage.lcov
 
       - name: Upload Coverage to Codecov
         uses: codecov/codecov-action@v4
         with:
-          files: bazel-testlogs/tests/layer_service_test/coverage.dat,bazel-testlogs/tests/domain_test/coverage.dat
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: bazel-testlogs/tests/coverage.lcov
           fail_ci_if_error: false
