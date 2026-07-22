@@ -106,3 +106,84 @@ cc_test(
         "@nlohmann_json//:json",
     ],
 )
+
+cc_test(
+    name = "gtfs_csv_parser_test",
+    srcs = ["gtfs_csv_parser_test.cc"],
+    deps = [
+        "//src/adapters/ingestion/gtfs:gtfs_parser",
+        "@googletest//:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "gtfs_agency_name_test",
+    srcs = ["gtfs_agency_name_test.cc"],
+    deps = [
+        "//src/adapters/ingestion/gtfs:gtfs_parser",
+        "//src/core/domain",
+        "@googletest//:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "gtfs_stop_classification_test",
+    srcs = ["gtfs_stop_classification_test.cc"],
+    deps = [
+        "//src/adapters/ingestion/gtfs:gtfs_parser",
+        "//src/core/domain",
+        "@googletest//:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "gtfs_route_geometry_test",
+    srcs = ["gtfs_route_geometry_test.cc"],
+    deps = [
+        "//src/adapters/ingestion/gtfs:gtfs_parser",
+        "//src/core/domain",
+        "@googletest//:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "gtfs_metadata_test",
+    srcs = ["gtfs_metadata_test.cc"],
+    deps = [
+        "//src/adapters/ingestion/gtfs:gtfs_parser",
+        "//src/core/domain",
+        "@googletest//:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "gtfs_bbox_filter_test",
+    srcs = ["gtfs_bbox_filter_test.cc"],
+    deps = [
+        "//src/adapters/ingestion/gtfs:gtfs_parser",
+        "//src/core/domain",
+        "@googletest//:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "gtfs_ingest_integration_test",
+    srcs = ["gtfs_ingest_integration_test.cc"],
+    deps = [
+        "//src/adapters/ingestion/gtfs:gtfs_parser",
+        "//src/adapters/persistence:file_persistence",
+        "//src/core/domain",
+        "@googletest//:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "gtfs_persistence_roundtrip_test",
+    srcs = ["gtfs_persistence_roundtrip_test.cc"],
+    deps = [
+        "//src/adapters/ingestion/gtfs:gtfs_parser",
+        "//src/adapters/persistence:file_persistence",
+        "//src/core/domain",
+        "@googletest//:gtest_main",
+    ],
+)
