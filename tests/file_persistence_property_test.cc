@@ -651,5 +651,103 @@ TEST_F(FilePersistencePropertyTest, SpatialQuery_NoLayersStored) {
     EXPECT_EQ(result.value().size(), 0u);
 }
 
+// =============================================================================
+// Property 2: Persistence save/load round-trip preserves coordinate values
+// For any valid Layer with arbitrary Coordinates, saving and loading preserves
+// exact latitude/longitude values with no swapping or loss of precision.
+// **Validates: Requirements 3.2**
+// =============================================================================
+
+TEST_F(FilePersistencePropertyTest, RoundTrip_AsymmetricCoordinates_DetectsSwap) {
+    // Use lat != lon so a swap bug would be observable
+    Layer layer{
+        .name = "asymmetric_layer",
+        .scale = SpatialScale::Urban,
+        .features = {GeoFeature{
+            .id = "asym1",
+            .geometry = Point{{12.3456, 78.9012}},
+            .properties = {{"note", std::string("lat!=lon")}},
+        }},
+    };
+
+    auto save_result = adapter_->save_layer(layer);
+    ASSERT_TRUE(save_result.has_value()) << "save_layer failed";
+
+    auto find_result = adapter_->find_layer("asymmetric_layer");
+    ASSERT_TRUE(find_result.has_value()) << "find_layer failed";
+
+    const auto& loaded = find_result.value();
+    ASSERT_TRUE(layer_equal(layer, loaded));
+
+    // Explicitly verify the coordinate was not swapped
+    const auto& orig_pt = std::get<Point>(layer.features[0].geometry);
+    const auto& load_pt = std::get<Point>(loaded.features[0].geometry);
+    EXPECT_EQ(orig_pt.position.latitude, load_pt.position.latitude);
+    EXPECT_EQ(orig_pt.position.longitude, load_pt.position.longitude);
+}
+
+TEST_F(FilePersistencePropertyTest, RoundTrip_ExtremeCoordinates_PolesAndDateLine) {
+    // North pole, south pole, and international date line
+    Layer layer{
+        .name = "extreme_layer",
+        .scale = SpatialScale::Regional,
+        .features = {
+            GeoFeature{
+                .id = "north_pole",
+                .geometry = Point{{90.0, 0.0}},
+                .properties = {},
+            },
+            GeoFeature{
+                .id = "south_pole",
+                .geometry = Point{{-90.0, 0.0}},
+                .properties = {},
+            },
+            GeoFeature{
+                .id = "date_line_east",
+                .geometry = Point{{0.0, 180.0}},
+                .properties = {},
+            },
+            GeoFeature{
+                .id = "date_line_west",
+                .geometry = Point{{0.0, -180.0}},
+                .properties = {},
+            },
+        },
+    };
+
+    auto save_result = adapter_->save_layer(layer);
+    ASSERT_TRUE(save_result.has_value()) << "save_layer failed";
+
+    auto find_result = adapter_->find_layer("extreme_layer");
+    ASSERT_TRUE(find_result.has_value()) << "find_layer failed";
+
+    EXPECT_TRUE(layer_equal(layer, find_result.value()));
+}
+
+TEST_F(FilePersistencePropertyTest, RoundTrip_HighPrecisionLineString) {
+    // High-precision coordinates to verify no loss of precision
+    Layer layer{
+        .name = "precision_layer",
+        .scale = SpatialScale::Urban,
+        .features = {GeoFeature{
+            .id = "precise_line",
+            .geometry = LineString{{
+                {43.26301234567890, -2.93501234567890},
+                {43.26412345678901, -2.93412345678901},
+                {43.26523456789012, -2.93323456789012},
+            }},
+            .properties = {{"type", std::string("precise_route")}},
+        }},
+    };
+
+    auto save_result = adapter_->save_layer(layer);
+    ASSERT_TRUE(save_result.has_value()) << "save_layer failed";
+
+    auto find_result = adapter_->find_layer("precision_layer");
+    ASSERT_TRUE(find_result.has_value()) << "find_layer failed";
+
+    EXPECT_TRUE(layer_equal(layer, find_result.value()));
+}
+
 }  // namespace
 }  // namespace garraiobide::adapters::persistence

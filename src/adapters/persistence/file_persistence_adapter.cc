@@ -40,13 +40,14 @@ SpatialScale string_to_scale(const std::string& s) {
 }
 
 json coordinate_to_json(const Coordinate& coord) {
-    // Store in domain order: [latitude, longitude]
-    return json::array({coord.latitude, coord.longitude});
+    // GeoJSON convention: [longitude, latitude]
+    return json::array({coord.longitude, coord.latitude});
 }
 
 Coordinate json_to_coordinate(const json& j) {
-    return Coordinate{.latitude = j[0].get<double>(),
-                      .longitude = j[1].get<double>()};
+    // GeoJSON convention: [longitude, latitude]
+    return Coordinate{.latitude = j[1].get<double>(),
+                      .longitude = j[0].get<double>()};
 }
 
 json geometry_to_json(const Geometry& geom) {
