@@ -40,11 +40,11 @@ jobs:
 
       - name: Generate coverage report (LCOV)
         run: |
-          lcov --capture --directory build --output-file coverage.info
-          lcov --remove coverage.info '/usr/*' --output-file coverage.info
-          lcov --remove coverage.info '*/tests/*' --output-file coverage.info
-          lcov --remove coverage.info '*/adapters/mock*' --output-file coverage.info
-          lcov --list coverage.info
+          lcov --capture --directory build --output-file coverage.info --ignore-errors mismatch
+          lcov --remove coverage.info '/usr/*' --output-file coverage.info --ignore-errors mismatch
+          lcov --remove coverage.info '*/tests/*' --output-file coverage.info --ignore-errors mismatch
+          lcov --remove coverage.info '*/adapters/mock*' --output-file coverage.info --ignore-errors mismatch
+          lcov --list coverage.info --ignore-errors mismatch
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v4
