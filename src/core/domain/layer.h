@@ -3,8 +3,8 @@
 #include <string>
 #include <vector>
 
-#include "src/core/domain/bounding_box.h"
-#include "src/core/domain/geo_feature.h"
+#include "bounding_box.h"
+#include "geo_feature.h"
 
 namespace garraiobide::core::domain {
 

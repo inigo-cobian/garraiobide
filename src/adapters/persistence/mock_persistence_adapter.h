@@ -5,8 +5,8 @@
 #include <unordered_map>
 #include <vector>
 
-#include "src/core/domain/layer.h"
-#include "src/core/ports/persistence_port.h"
+#include "../../core/domain/layer.h"
+#include "../../core/ports/persistence_port.h"
 
 namespace garraiobide::adapters::persistence {
 

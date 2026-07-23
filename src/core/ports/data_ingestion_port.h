@@ -4,8 +4,8 @@
 #include <string>
 #include <vector>
 
-#include "src/core/domain/bounding_box.h"
-#include "src/core/domain/geo_feature.h"
+#include "../domain/bounding_box.h"
+#include "../domain/geo_feature.h"
 
 namespace garraiobide::core::ports {
 

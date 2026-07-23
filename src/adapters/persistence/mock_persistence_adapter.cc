@@ -1,4 +1,4 @@
-#include "src/adapters/persistence/mock_persistence_adapter.h"
+#include "mock_persistence_adapter.h"
 
 namespace garraiobide::adapters::persistence {
 

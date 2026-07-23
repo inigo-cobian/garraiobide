@@ -4,8 +4,8 @@
 #include <string>
 #include <vector>
 
-#include "src/core/domain/geo_feature.h"
-#include "src/core/ports/data_ingestion_port.h"
+#include "../../core/domain/geo_feature.h"
+#include "../../core/ports/data_ingestion_port.h"
 
 namespace garraiobide::adapters::ingestion {
 

@@ -3,8 +3,8 @@
 #include <string>
 #include <vector>
 
-#include "src/core/domain/geo_feature.h"
-#include "src/core/domain/layer.h"
+#include "../../core/domain/geo_feature.h"
+#include "../../core/domain/layer.h"
 
 namespace garraiobide::adapters::http {
 

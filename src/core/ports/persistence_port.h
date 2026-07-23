@@ -5,8 +5,8 @@
 #include <string>
 #include <vector>
 
-#include "src/core/domain/bounding_box.h"
-#include "src/core/domain/layer.h"
+#include "../domain/bounding_box.h"
+#include "../domain/layer.h"
 
 namespace garraiobide::core::ports {
 

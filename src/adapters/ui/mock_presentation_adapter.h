@@ -3,8 +3,8 @@
 #include <string>
 #include <vector>
 
-#include "src/core/domain/layer.h"
-#include "src/core/ports/presentation_port.h"
+#include "../../core/domain/layer.h"
+#include "../../core/ports/presentation_port.h"
 
 namespace garraiobide::adapters::ui {
 

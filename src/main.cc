@@ -1,14 +1,13 @@
 #include <cstdlib>
 #include <iostream>
 
-#include "src/adapters/ingestion/mock_ingestion_adapter.h"
-#include "src/adapters/persistence/mock_persistence_adapter.h"
-#include "src/adapters/ui/mock_presentation_adapter.h"
-#include "src/app/app_config.h"
-#include "src/app/layer_service.h"
-#include "src/app/parse_args.h"
-#include "src/core/domain/geo_feature.h"
-#include "src/core/domain/geometry.h"
+#include "adapters/ingestion/mock_ingestion_adapter.h"
+#include "adapters/persistence/mock_persistence_adapter.h"
+#include "adapters/ui/mock_presentation_adapter.h"
+#include "app/layer_service.h"
+#include "app/parse_args.h"
+#include "core/domain/geo_feature.h"
+#include "core/domain/geometry.h"
 
 using namespace garraiobide;
 

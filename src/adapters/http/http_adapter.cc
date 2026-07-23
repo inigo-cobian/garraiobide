@@ -1,9 +1,9 @@
-#include "src/adapters/http/http_adapter.h"
+#include "http_adapter.h"
 
 #include <charconv>
 #include <string>
 
-#include "src/adapters/http/geojson_serializer.h"
+#include "geojson_serializer.h"
 
 namespace garraiobide::adapters::http {
 

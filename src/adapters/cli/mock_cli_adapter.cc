@@ -1,4 +1,4 @@
-#include "src/adapters/cli/mock_cli_adapter.h"
+#include "mock_cli_adapter.h"
 
 namespace garraiobide::adapters::cli {
 

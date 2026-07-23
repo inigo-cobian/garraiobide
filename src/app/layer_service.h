@@ -4,11 +4,11 @@
 #include <string>
 #include <vector>
 
-#include "src/core/domain/bounding_box.h"
-#include "src/core/domain/layer.h"
-#include "src/core/ports/data_ingestion_port.h"
-#include "src/core/ports/persistence_port.h"
-#include "src/core/ports/presentation_port.h"
+#include "../core/domain/bounding_box.h"
+#include "../core/domain/layer.h"
+#include "../core/ports/data_ingestion_port.h"
+#include "../core/ports/persistence_port.h"
+#include "../core/ports/presentation_port.h"
 
 namespace garraiobide::app {
 

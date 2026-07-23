@@ -13,9 +13,9 @@
 #include <args.hxx>
 #include <zip.h>
 
-#include "src/adapters/ingestion/gtfs/csv_parser.h"
-#include "src/adapters/ingestion/gtfs/gtfs_parser.h"
-#include "src/adapters/persistence/file_persistence_adapter.h"
+#include "../adapters/ingestion/gtfs/csv_parser.h"
+#include "../adapters/ingestion/gtfs/gtfs_parser.h"
+#include "../adapters/persistence/file_persistence_adapter.h"
 
 namespace {
 

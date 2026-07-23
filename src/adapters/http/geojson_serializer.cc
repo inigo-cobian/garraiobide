@@ -1,4 +1,4 @@
-#include "src/adapters/http/geojson_serializer.h"
+#include "geojson_serializer.h"
 
 #include <nlohmann/json.hpp>
 #include <variant>

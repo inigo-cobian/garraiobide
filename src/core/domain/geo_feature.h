@@ -3,8 +3,8 @@
 #include <optional>
 #include <string>
 
-#include "src/core/domain/geometry.h"
-#include "src/core/domain/properties.h"
+#include "geometry.h"
+#include "properties.h"
 
 namespace garraiobide::core::domain {
 

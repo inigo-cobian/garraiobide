@@ -1,4 +1,4 @@
-#include "src/adapters/ui/mock_presentation_adapter.h"
+#include "mock_presentation_adapter.h"
 
 namespace garraiobide::adapters::ui {
 

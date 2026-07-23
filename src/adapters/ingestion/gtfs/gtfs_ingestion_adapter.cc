@@ -1,12 +1,12 @@
-#include "src/adapters/ingestion/gtfs/gtfs_ingestion_adapter.h"
+#include "gtfs_ingestion_adapter.h"
 
 #include <zip.h>
 
 #include <string>
 #include <vector>
 
-#include "src/adapters/ingestion/gtfs/csv_parser.h"
-#include "src/adapters/ingestion/gtfs/gtfs_parser.h"
+#include "csv_parser.h"
+#include "gtfs_parser.h"
 
 namespace garraiobide::adapters::ingestion::gtfs {
 

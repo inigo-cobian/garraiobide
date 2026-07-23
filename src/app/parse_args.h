@@ -4,7 +4,7 @@
 #include <expected>
 #include <string>
 
-#include "src/app/app_config.h"
+#include "../app/app_config.h"
 
 namespace garraiobide::app {
 

@@ -3,7 +3,7 @@
 #include <string>
 #include <vector>
 
-#include "src/core/ports/cli_port.h"
+#include "../../core/ports/cli_port.h"
 
 namespace garraiobide::adapters::cli {
 

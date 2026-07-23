@@ -1,4 +1,4 @@
-#include "src/adapters/persistence/file_persistence_adapter.h"
+#include "file_persistence_adapter.h"
 
 #include <fstream>
 

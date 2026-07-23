@@ -1,4 +1,4 @@
-#include "src/adapters/ingestion/gtfs/gtfs_parser.h"
+#include "gtfs_parser.h"
 
 #include <algorithm>
 #include <cctype>

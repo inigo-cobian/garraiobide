@@ -1,4 +1,4 @@
-#include "src/adapters/ingestion/mock_ingestion_adapter.h"
+#include "mock_ingestion_adapter.h"
 
 #include <algorithm>
 

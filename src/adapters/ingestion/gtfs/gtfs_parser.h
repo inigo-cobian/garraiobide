@@ -5,9 +5,9 @@
 #include <unordered_map>
 #include <vector>
 
-#include "src/adapters/ingestion/gtfs/csv_parser.h"
-#include "src/core/domain/layer.h"
-#include "src/core/ports/data_ingestion_port.h"
+#include "../../adapters/ingestion/gtfs/csv_parser.h"
+#include "../../core/domain/layer.h"
+#include "../../core/ports/data_ingestion_port.h"
 
 namespace garraiobide::adapters::ingestion::gtfs {
 

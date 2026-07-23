@@ -3,7 +3,7 @@
 #include <variant>
 #include <vector>
 
-#include "src/core/domain/coordinate.h"
+#include "coordinate.h"
 
 namespace garraiobide::core::domain {
 
