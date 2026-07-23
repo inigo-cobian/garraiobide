@@ -1,9 +1,9 @@
 #include <gtest/gtest.h>
 
-#include "src/core/domain/bounding_box.h"
-#include "src/core/domain/coordinate.h"
-#include "src/core/domain/geo_feature.h"
-#include "src/core/domain/layer.h"
+#include "../src/core/domain/bounding_box.h"
+#include "../src/core/domain/coordinate.h"
+#include "../src/core/domain/geo_feature.h"
+#include "../src/core/domain/layer.h"
 
 namespace garraiobide::core::domain {
 namespace {

@@ -6,14 +6,14 @@
 #include <string>
 #include <vector>
 
-#include "src/adapters/persistence/file_persistence_adapter.h"
-#include "src/core/domain/bounding_box.h"
-#include "src/core/domain/coordinate.h"
-#include "src/core/domain/geo_feature.h"
-#include "src/core/domain/geometry.h"
-#include "src/core/domain/layer.h"
-#include "src/core/domain/properties.h"
-#include "src/core/ports/persistence_port.h"
+#include "../src/adapters/persistence/file_persistence_adapter.h"
+#include "../src/core/domain/bounding_box.h"
+#include "../src/core/domain/coordinate.h"
+#include "../src/core/domain/geo_feature.h"
+#include "../src/core/domain/geometry.h"
+#include "../src/core/domain/layer.h"
+#include "../src/core/domain/properties.h"
+#include "../src/core/ports/persistence_port.h"
 
 namespace garraiobide::adapters::persistence {
 namespace {

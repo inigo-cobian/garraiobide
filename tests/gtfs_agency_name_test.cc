@@ -3,7 +3,7 @@
 #include <string>
 #include <vector>
 
-#include "src/adapters/ingestion/gtfs/gtfs_parser.h"
+#include "../src/adapters/ingestion/gtfs/gtfs_parser.h"
 
 namespace garraiobide::adapters::ingestion::gtfs {
 namespace {

@@ -7,13 +7,13 @@
 #include <variant>
 #include <vector>
 
-#include "src/adapters/http/geojson_serializer.h"
-#include "src/adapters/persistence/file_persistence_adapter.h"
-#include "src/core/domain/coordinate.h"
-#include "src/core/domain/geo_feature.h"
-#include "src/core/domain/geometry.h"
-#include "src/core/domain/layer.h"
-#include "src/core/domain/properties.h"
+#include "../src/adapters/http/geojson_serializer.h"
+#include "../src/adapters/persistence/file_persistence_adapter.h"
+#include "../src/core/domain/coordinate.h"
+#include "../src/core/domain/geo_feature.h"
+#include "../src/core/domain/geometry.h"
+#include "../src/core/domain/layer.h"
+#include "../src/core/domain/properties.h"
 
 // =============================================================================
 // Property 3: End-to-end coordinate consistency (persistence to HTTP output)

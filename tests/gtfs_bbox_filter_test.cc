@@ -3,10 +3,10 @@
 #include <variant>
 #include <vector>
 
-#include "src/adapters/ingestion/gtfs/gtfs_parser.h"
-#include "src/core/domain/bounding_box.h"
-#include "src/core/domain/geo_feature.h"
-#include "src/core/domain/geometry.h"
+#include "../src/adapters/ingestion/gtfs/gtfs_parser.h"
+#include "../src/core/domain/bounding_box.h"
+#include "../src/core/domain/geo_feature.h"
+#include "../src/core/domain/geometry.h"
 
 namespace garraiobide::adapters::ingestion::gtfs {
 namespace {

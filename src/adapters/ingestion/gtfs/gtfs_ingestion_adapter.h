@@ -5,9 +5,8 @@
 #include <string>
 #include <vector>
 
-#include "../../core/domain/bounding_box.h"
-#include "../../core/domain/geo_feature.h"
-#include "../../core/ports/data_ingestion_port.h"
+#include "core/ports/data_ingestion_port.h"
+
 
 namespace garraiobide::adapters::ingestion::gtfs {
 

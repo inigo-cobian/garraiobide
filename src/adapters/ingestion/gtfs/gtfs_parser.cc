@@ -6,11 +6,6 @@
 #include <sstream>
 #include <string>
 
-#include "src/core/domain/geo_feature.h"
-#include "src/core/domain/geometry.h"
-#include "src/core/domain/coordinate.h"
-#include "src/core/domain/properties.h"
-
 namespace garraiobide::adapters::ingestion::gtfs {
 
 namespace {

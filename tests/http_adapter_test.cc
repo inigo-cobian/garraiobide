@@ -6,14 +6,14 @@
 #include <httplib.h>
 #include <nlohmann/json.hpp>
 
-#include "src/adapters/http/http_adapter.h"
-#include "src/adapters/ingestion/mock_ingestion_adapter.h"
-#include "src/adapters/persistence/mock_persistence_adapter.h"
-#include "src/adapters/ui/mock_presentation_adapter.h"
-#include "src/app/layer_service.h"
-#include "src/core/domain/geo_feature.h"
-#include "src/core/domain/geometry.h"
-#include "src/core/domain/layer.h"
+#include "../src/adapters/http/http_adapter.h"
+#include "../src/adapters/ingestion/mock_ingestion_adapter.h"
+#include "../src/adapters/persistence/mock_persistence_adapter.h"
+#include "../src/adapters/ui/mock_presentation_adapter.h"
+#include "../src/app/layer_service.h"
+#include "../src/core/domain/geo_feature.h"
+#include "../src/core/domain/geometry.h"
+#include "../src/core/domain/layer.h"
 
 namespace garraiobide::tests {
 namespace {

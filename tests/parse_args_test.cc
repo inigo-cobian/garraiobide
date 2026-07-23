@@ -1,6 +1,6 @@
 #include <gtest/gtest.h>
 
-#include "src/app/parse_args.h"
+#include "../src/app/parse_args.h"
 
 namespace garraiobide::app {
 namespace {
