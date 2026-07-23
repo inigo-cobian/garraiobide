@@ -15,7 +15,7 @@ jobs:
       - name: Install system dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y build-essential cmake g++ lcov
+          sudo apt-get install -y build-essential cmake g++ lcov ninja-build
 
       - name: Install Conan
         run: pip install conan
@@ -24,35 +24,26 @@ jobs:
         run: conan profile detect
 
       - name: Install dependencies (Conan)
-        run: conan install . --build=missing -s build_type=Debug -of build
+        run: conan install . --build=missing -s build_type=Debug
 
       - name: Configure CMake
         run: |
-          cd build
-          cmake .. \
-            -DCMAKE_BUILD_TYPE=Debug \
+          cmake --preset conan-debug \
             -DCMAKE_CXX_FLAGS="--coverage" \
-            -DCMAKE_EXE_LINKER_FLAGS="--coverage" \
-            -DCMAKE_TOOLCHAIN_FILE=${{ github.workspace }}/build/Debug/generators/conan_toolchain.cmake \
-            -DCMAKE_MAKE_PROGRAM=ninja \
-            -DCMAKE_CXX_COMPILER=g++
+            -DCMAKE_EXE_LINKER_FLAGS="--coverage"
 
       - name: Build
-        run: |
-          cd build
-          cmake --build . --parallel
+        run: cmake --build --preset conan-debug --parallel
 
       - name: Run tests
-        run: |
-          cd build
-          ctest --output-on-failure
+        run: ctest --preset conan-debug --output-on-failure
 
       - name: Generate coverage report (LCOV)
         run: |
           lcov --capture --directory build --output-file coverage.info
           lcov --remove coverage.info '/usr/*' --output-file coverage.info
           lcov --remove coverage.info '*/tests/*' --output-file coverage.info
-          lcov --remove coverage.info '*/adapters/mock*' --output-file coverage.info   # exclude mocks
+          lcov --remove coverage.info '*/adapters/mock*' --output-file coverage.info
           lcov --list coverage.info
 
       - name: Upload coverage to Codecov
