@@ -12,26 +12,50 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - uses: bazelbuild/setup-bazelisk@v3
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake g++ lcov
+
+      - name: Install Conan
+        run: pip install conan
+
+      - name: Create Conan profile
+        run: conan profile detect
+
+      - name: Install dependencies (Conan)
+        run: conan install . --build=missing -s build_type=Debug -of build
+
+      - name: Configure CMake
+        run: |
+          cd build
+          cmake .. \
+            -DCMAKE_BUILD_TYPE=Debug \
+            -DCMAKE_CXX_FLAGS="--coverage" \
+            -DCMAKE_EXE_LINKER_FLAGS="--coverage" \
+            -DCMAKE_TOOLCHAIN_FILE=conan_toolchain.cmake
 
       - name: Build
-        run: bazel build //...
-
-      - name: Test with Coverage
         run: |
-          bazel coverage \
-            --combined_report=lcov \
-            --instrumentation_filter="//src[/:]" \
-            //tests:all
+          cd build
+          cmake --build . --parallel
 
-      - name: Prepare Coverage Report
+      - name: Run tests
         run: |
-          mkdir -p bazel-testlogs/tests
-          cp "$(bazel info output_path)/_coverage/_coverage_report.dat" bazel-testlogs/tests/coverage.lcov
+          cd build
+          ctest --output-on-failure
 
-      - name: Upload Coverage to Codecov
+      - name: Generate coverage report (LCOV)
+        run: |
+          lcov --capture --directory build --output-file coverage.info
+          lcov --remove coverage.info '/usr/*' --output-file coverage.info
+          lcov --remove coverage.info '*/tests/*' --output-file coverage.info
+          lcov --remove coverage.info '*/adapters/mock*' --output-file coverage.info   # exclude mocks
+          lcov --list coverage.info   # show summary
+
+      - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v4
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
-          files: bazel-testlogs/tests/coverage.lcov
+          files: coverage.info
           fail_ci_if_error: false
