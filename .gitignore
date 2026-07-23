@@ -93,3 +93,7 @@ docker/secrets/
 
 # Kiro
 .kiro/
+.hypothesis/
+
+# CLion / IntelliJ
+.idea
