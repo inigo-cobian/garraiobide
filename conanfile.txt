@@ -13,3 +13,5 @@ CMakeToolchain
 cmake_layout
 
 [options]
+boost/1.90.0:without_cobalt=True
+boost/1.90.0:without_test=True
