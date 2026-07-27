@@ -19,6 +19,7 @@ add_executable(garraiobide_tests
         http_adapter_test.cc
         layer_service_test.cc
         parse_args_test.cc
+        mocks/mock_ingestion_adapter.cc
 )
 
 target_include_directories(garraiobide_tests PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
