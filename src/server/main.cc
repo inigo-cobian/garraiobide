@@ -3,11 +3,11 @@
 
 #include <args.hxx>
 
-#include "src/adapters/http/http_adapter.h"
-#include "src/adapters/ingestion/mock_ingestion_adapter.h"
-#include "src/adapters/persistence/file_persistence_adapter.h"
-#include "src/adapters/ui/mock_presentation_adapter.h"
-#include "src/app/layer_service.h"
+#include "../adapters/http/http_adapter.h"
+#include "../adapters/ingestion/gtfs/gtfs_ingestion_adapter.h"
+#include "../adapters/persistence/file_persistence_adapter.h"
+#include "../adapters/ui/mock_presentation_adapter.h"
+#include "../app/layer_service.h"
 
 int main(int argc, char* argv[]) {
     args::ArgumentParser parser("API Server",
@@ -33,7 +33,7 @@ int main(int argc, char* argv[]) {
     // Wire adapters.
     garraiobide::adapters::persistence::FilePersistenceAdapter persistence(
         "data/");
-    garraiobide::adapters::ingestion::MockIngestionAdapter ingestion;
+    garraiobide::adapters::ingestion::gtfs::GtfsIngestionAdapter ingestion;
     garraiobide::adapters::ui::MockPresentationAdapter presentation;
 
     // Create application service.

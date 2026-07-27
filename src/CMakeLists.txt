@@ -27,5 +27,5 @@ target_link_libraries(garraiobide_src
         httplib::httplib
 )
 
-add_executable(garraiobide_app main.cc)
+add_executable(garraiobide_app server/main.cc)
 target_link_libraries(garraiobide_app PRIVATE garraiobide_src)
