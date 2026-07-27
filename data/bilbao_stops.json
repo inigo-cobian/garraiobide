@@ -1,0 +1,21 @@
+{
+  "name": "bilbao_stops",
+  "scale": "Urban",
+  "features": [
+    {
+      "id": "stop_001",
+      "geometry": { "type": "Point", "coordinates": [-2.9350, 43.2630] },
+      "properties": { "name": "Plaza Moyua", "lines": 5, "accessible": true }
+    },
+    {
+      "id": "stop_002",
+      "geometry": { "type": "Point", "coordinates": [-2.9230, 43.2620] },
+      "properties": { "name": "Abando Indalecio Prieto", "lines": 3, "accessible": true }
+    },
+    {
+      "id": "stop_003",
+      "geometry": { "type": "Point", "coordinates": [-2.9395, 43.2710] },
+      "properties": { "name": "San Mamés", "lines": 2, "accessible": false }
+    }
+  ]
+}

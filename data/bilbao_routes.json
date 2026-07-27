@@ -1,0 +1,14 @@
+{
+  "name": "bilbao_routes",
+  "scale": "Urban",
+  "features": [
+    {
+      "id": "tram_line_1",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [[-2.9230, 43.2550], [-2.9300, 43.2600], [-2.9350, 43.2630], [-2.9400, 43.2710]]
+      },
+      "properties": { "route": "Tram L1", "frequency_min": 8 }
+    }
+  ]
+}

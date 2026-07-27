@@ -84,7 +84,7 @@ class HttpAdapterTest : public ::testing::Test {
 
 // ---------- GET /api/layers ----------
 
-TEST_F(HttpAdapterTest, DISABLED_ListLayersReturnsJsonArray) {
+TEST_F(HttpAdapterTest, ListLayersReturnsJsonArray) {
     seed_layer("bilbao_stops");
     seed_layer("donostia_routes");
 
@@ -106,7 +106,7 @@ TEST_F(HttpAdapterTest, DISABLED_ListLayersReturnsJsonArray) {
                 names.end());
 }
 
-TEST_F(HttpAdapterTest, DISABLED_ListLayersEmptyReturnsEmptyArray) {
+TEST_F(HttpAdapterTest, ListLayersEmptyReturnsEmptyArray) {
     httplib::Client client(kTestHost, kTestPort);
     auto res = client.Get("/api/layers");
 
@@ -121,7 +121,7 @@ TEST_F(HttpAdapterTest, DISABLED_ListLayersEmptyReturnsEmptyArray) {
 // ---------- GET /api/layers/{name} ----------
 
 
-TEST_F(HttpAdapterTest, DISABLED_GetLayerReturnsGeoJsonFeatureCollection) {
+TEST_F(HttpAdapterTest, GetLayerReturnsGeoJsonFeatureCollection) {
     seed_layer("bilbao_stops");
 
     httplib::Client client(kTestHost, kTestPort);
@@ -169,7 +169,7 @@ TEST_F(HttpAdapterTest, GetNonExistentLayerReturns404) {
 
 // ---------- GET /api/query ----------
 
-TEST_F(HttpAdapterTest, DISABLED_QueryWithValidParamsReturnsFeatures) {
+TEST_F(HttpAdapterTest, QueryWithValidParamsReturnsFeatures) {
     seed_layer("bilbao_stops");
 
     httplib::Client client(kTestHost, kTestPort);
@@ -190,7 +190,7 @@ TEST_F(HttpAdapterTest, DISABLED_QueryWithValidParamsReturnsFeatures) {
     EXPECT_EQ(feature["id"], "stop_001");
 }
 
-TEST_F(HttpAdapterTest, DISABLED_QueryWithBboxOutsideReturnsEmptyCollection) {
+TEST_F(HttpAdapterTest, QueryWithBboxOutsideReturnsEmptyCollection) {
     seed_layer("bilbao_stops");
 
     httplib::Client client(kTestHost, kTestPort);

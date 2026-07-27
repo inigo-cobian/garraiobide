@@ -1,0 +1,16 @@
+{
+  "name": "bilbao_zones",
+  "scale": "Urban",
+  "features": [
+    {
+      "id": "zone_casco_viejo",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [[-2.9220, 43.2570], [-2.9270, 43.2570], [-2.9270, 43.2610], [-2.9220, 43.2610], [-2.9220, 43.2570]]
+        ]
+      },
+      "properties": { "zone": "Casco Viejo", "historic": true }
+    }
+  ]
+}
