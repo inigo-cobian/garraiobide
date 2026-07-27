@@ -3,6 +3,7 @@
 
 #include <args.hxx>
 
+#include "../../../../.conan2/p/taywed23c33e6de007/p/include/args.hxx"
 #include "../adapters/http/http_adapter.h"
 #include "../adapters/ingestion/gtfs/gtfs_ingestion_adapter.h"
 #include "../adapters/persistence/file_persistence_adapter.h"
@@ -15,7 +16,9 @@ int main(int argc, char* argv[]) {
     args::HelpFlag help(parser, "help", "Display this help menu",
                         {'h', "help"});
     args::ValueFlag<std::uint16_t> port_flag(
-        parser, "PORT", "Port to listen on", {"port"}, 8080);
+        parser, "PORT", "Port to listen on", {'p', "port"}, 8080);
+    args::ValueFlag<std::string> data_flag(
+        parser, "DataDir", "Directory of the data",  {'d', "data"}, "data/");
 
     try {
         parser.ParseCLI(argc, argv);
@@ -29,10 +32,11 @@ int main(int argc, char* argv[]) {
     }
 
     const std::uint16_t port = args::get(port_flag);
+    const std::string_view data = args::get(data_flag);
 
     // Wire adapters.
     garraiobide::adapters::persistence::FilePersistenceAdapter persistence(
-        "data/");
+        data);
     garraiobide::adapters::ingestion::gtfs::GtfsIngestionAdapter ingestion;
     garraiobide::adapters::ui::MockPresentationAdapter presentation;
 
