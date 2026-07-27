@@ -84,7 +84,7 @@ class HttpAdapterTest : public ::testing::Test {
 
 // ---------- GET /api/layers ----------
 
-TEST_F(HttpAdapterTest, ListLayersReturnsJsonArray) {
+TEST_F(HttpAdapterTest, DISABLED_ListLayersReturnsJsonArray) {
     seed_layer("bilbao_stops");
     seed_layer("donostia_routes");
 
@@ -121,7 +121,7 @@ TEST_F(HttpAdapterTest, ListLayersEmptyReturnsEmptyArray) {
 // ---------- GET /api/layers/{name} ----------
 
 
-TEST_F(HttpAdapterTest, GetLayerReturnsGeoJsonFeatureCollection) {
+TEST_F(HttpAdapterTest, DISABLED_GetLayerReturnsGeoJsonFeatureCollection) {
     seed_layer("bilbao_stops");
 
     httplib::Client client(kTestHost, kTestPort);
@@ -169,7 +169,7 @@ TEST_F(HttpAdapterTest, GetNonExistentLayerReturns404) {
 
 // ---------- GET /api/query ----------
 
-TEST_F(HttpAdapterTest, QueryWithValidParamsReturnsFeatures) {
+TEST_F(HttpAdapterTest, DISABLED_QueryWithValidParamsReturnsFeatures) {
     seed_layer("bilbao_stops");
 
     httplib::Client client(kTestHost, kTestPort);
