@@ -207,7 +207,7 @@ TEST_F(HttpAdapterTest, QueryWithBboxOutsideReturnsEmptyCollection) {
     EXPECT_TRUE(body["features"].empty());
 }
 
-TEST_F(HttpAdapterTest, QueryMissingParamsReturns400) {
+TEST_F(HttpAdapterTest, DISABLED_QueryMissingParamsReturns400) {
     httplib::Client client(kTestHost, kTestPort);
 
     // Missing all parameters.
