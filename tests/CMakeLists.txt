@@ -16,6 +16,7 @@ add_executable(garraiobide_tests
         gtfs_persistence_roundtrip_test.cc
         gtfs_route_geometry_test.cc
         gtfs_stop_classification_test.cc
+        http_adapter_readiness_test.cc
         http_adapter_test.cc
         layer_service_test.cc
         mongo_persistence_integration_test.cc
