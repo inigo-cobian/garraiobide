@@ -18,6 +18,8 @@ add_executable(garraiobide_tests
         gtfs_stop_classification_test.cc
         http_adapter_test.cc
         layer_service_test.cc
+        mongo_persistence_integration_test.cc
+        mongo_persistence_property_test.cc
         parse_args_test.cc
         mocks/mock_ingestion_adapter.cc
 )
