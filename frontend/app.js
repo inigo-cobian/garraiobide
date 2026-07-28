@@ -298,6 +298,112 @@
   }
 
   // ---------------------------------------------------------------------------
+  // Layer List Refresh and Highlight (Req 4.1, 4.2, 4.3, 4.4, 4.5)
+  // ---------------------------------------------------------------------------
+  function refreshLayerList() {
+    fetch(API_BASE + '/api/layers')
+      .then(function (response) {
+        if (!response.ok) throw new Error('Failed to refresh');
+        return response.json();
+      })
+      .then(function (layerNames) {
+        var previousActive = activeLayerName;
+        populateLayerList(layerNames);
+        if (previousActive && layerNames.indexOf(previousActive) !== -1) {
+          highlightLayer(previousActive);
+        } else if (previousActive) {
+          if (currentLayer) { map.removeLayer(currentLayer); currentLayer = null; }
+          activeLayerName = null;
+        }
+      })
+      .catch(function (err) {
+        showNotification('Could not refresh layer list', 'error');
+      });
+  }
+
+  function highlightLayer(name) {
+    var items = layerListEl.querySelectorAll('li');
+    for (var i = 0; i < items.length; i++) {
+      if (items[i].dataset.layerName === name) {
+        items[i].classList.add('active');
+        items[i].setAttribute('aria-pressed', 'true');
+      } else {
+        items[i].classList.remove('active');
+        items[i].setAttribute('aria-pressed', 'false');
+      }
+    }
+    activeLayerName = name;
+  }
+
+  // ---------------------------------------------------------------------------
+  // GTFS Upload Logic (Req 1.3, 1.4, 1.5, 1.7, 1.8, 1.9, 5.1–5.6, 6.1, 6.2)
+  // ---------------------------------------------------------------------------
+  var fileInput = document.getElementById('gtfs-file-input');
+  var submitBtn = document.getElementById('gtfs-submit-btn');
+  var statusEl = document.getElementById('gtfs-status');
+
+  fileInput.addEventListener('change', function() {
+    submitBtn.disabled = !fileInput.files.length;
+  });
+
+  submitBtn.addEventListener('click', function() {
+    var file = fileInput.files[0];
+    if (!file) return;
+
+    // Extension validation (case-insensitive)
+    if (!file.name.match(/\.zip$/i)) {
+      showNotification('Please select a .zip file', 'error');
+      return;
+    }
+
+    // Size validation (50 MB)
+    if (file.size > 50 * 1024 * 1024) {
+      showNotification('File exceeds the 50 MB size limit', 'error');
+      return;
+    }
+
+    // Disable controls, show loading
+    submitBtn.disabled = true;
+    fileInput.disabled = true;
+    statusEl.textContent = 'Importing...';
+
+    var formData = new FormData();
+    formData.append('file', file);
+
+    var controller = new AbortController();
+    var timeoutId = setTimeout(function() { controller.abort(); }, 30000);
+
+    fetch(API_BASE + '/api/ingest/gtfs', {
+      method: 'POST',
+      body: formData,
+      signal: controller.signal
+    })
+    .then(function(response) {
+      clearTimeout(timeoutId);
+      return response.json().then(function(data) {
+        return { status: response.status, body: data };
+      });
+    })
+    .then(function(result) {
+      if (result.status === 200) {
+        showNotification('GTFS import complete', 'success');
+        refreshLayerList();
+      } else {
+        showNotification(result.body.error || 'Upload failed', 'error');
+      }
+    })
+    .catch(function(err) {
+      clearTimeout(timeoutId);
+      showNotification('Import failed: network error', 'error');
+    })
+    .finally(function() {
+      statusEl.textContent = '';
+      submitBtn.disabled = false;
+      fileInput.disabled = false;
+    });
+  });
+
+  // ---------------------------------------------------------------------------
   // Initialize on Load (Req 6.2)
   // ---------------------------------------------------------------------------
   fetchLayers();

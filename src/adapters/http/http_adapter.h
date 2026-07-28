@@ -30,6 +30,10 @@ class HttpAdapter {
                           httplib::Response& res);
     void handle_query_features(const httplib::Request& req,
                                httplib::Response& res);
+    void handle_ingest_gtfs(const httplib::Request& req,
+                            httplib::Response& res);
+    void handle_ingest_gtfs_options(const httplib::Request& req,
+                                    httplib::Response& res);
 
     app::LayerService& service_;
     httplib::Server server_;

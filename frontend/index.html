@@ -20,6 +20,15 @@
   <div id="layer-control" class="layer-control" aria-label="Layer selector">
     <h2 class="layer-control__title">Layers</h2>
     <ul id="layer-list" class="layer-control__list"></ul>
+    <div id="ingestion-panel" class="ingestion-panel">
+      <h3 class="ingestion-panel__title">Import GTFS</h3>
+      <input type="file" id="gtfs-file-input" accept=".zip"
+             aria-label="GTFS file selector" />
+      <button id="gtfs-submit-btn" disabled aria-label="Import GTFS">
+        Import GTFS
+      </button>
+      <span id="gtfs-status" class="ingestion-panel__status" aria-live="polite"></span>
+    </div>
   </div>
 
   <div id="notifications" class="notifications" aria-live="polite" aria-atomic="true"></div>
