@@ -1,6 +1,10 @@
 #include "http_adapter.h"
 
+#include <algorithm>
+#include <cctype>
 #include <charconv>
+#include <filesystem>
+#include <fstream>
 #include <string>
 
 #include "geojson_serializer.h"
@@ -9,9 +13,72 @@ namespace garraiobide::adapters::http {
 
 namespace {
 
+/// RAII guard that deletes a temporary file when it goes out of scope.
+struct TempFileGuard {
+    std::string path;
+    ~TempFileGuard() {
+        if (!path.empty()) {
+            std::filesystem::remove(path);
+        }
+    }
+};
+
+/// Maximum upload size: 50 MB.
+constexpr std::size_t kMaxUploadSize = 50ULL * 1024 * 1024;
+
 /// Helper to build a JSON error response body.
 std::string error_json(const std::string& message) {
     return R"({"error": ")" + message + R"("})";
+}
+
+/// Derive a layer prefix from a filename.
+/// Strips the .zip extension, converts to lowercase, and replaces
+/// non-alphanumeric characters with underscores. Returns "gtfs" if
+/// the result is empty.
+std::string derive_layer_prefix(const std::string& filename) {
+    std::string name = filename;
+
+    // Strip .zip extension (case-insensitive).
+    if (name.size() >= 4) {
+        std::string suffix = name.substr(name.size() - 4);
+        std::transform(suffix.begin(), suffix.end(), suffix.begin(),
+                       [](unsigned char c) { return std::tolower(c); });
+        if (suffix == ".zip") {
+            name = name.substr(0, name.size() - 4);
+        }
+    }
+
+    // Normalize: lowercase, non-alphanumeric → underscore.
+    std::string result;
+    result.reserve(name.size());
+    for (unsigned char c : name) {
+        if (std::isalnum(c)) {
+            result += static_cast<char>(std::tolower(c));
+        } else {
+            result += '_';
+        }
+    }
+
+    // Trim leading/trailing underscores and collapse consecutive underscores.
+    std::string cleaned;
+    bool prev_underscore = true;  // suppress leading underscores
+    for (char c : result) {
+        if (c == '_') {
+            if (!prev_underscore) {
+                cleaned += c;
+            }
+            prev_underscore = true;
+        } else {
+            cleaned += c;
+            prev_underscore = false;
+        }
+    }
+    // Remove trailing underscore.
+    if (!cleaned.empty() && cleaned.back() == '_') {
+        cleaned.pop_back();
+    }
+
+    return cleaned.empty() ? "gtfs" : cleaned;
 }
 
 /// Set common headers on all responses.
@@ -55,6 +122,30 @@ void HttpAdapter::register_routes() {
                                      httplib::Response& res) {
         handle_query_features(req, res);
     });
+
+    server_.Post("/api/ingest/gtfs",
+                 [this](const httplib::Request& req, httplib::Response& res) {
+                     handle_ingest_gtfs(req, res);
+                 });
+
+    server_.Options("/api/ingest/gtfs",
+                    [this](const httplib::Request& req, httplib::Response& res) {
+                        handle_ingest_gtfs_options(req, res);
+                    });
+
+    // Method-not-allowed handlers for /api/ingest/gtfs.
+    auto method_not_allowed = [](const httplib::Request& /*req*/,
+                                 httplib::Response& res) {
+        res.set_header("Access-Control-Allow-Origin", "*");
+        res.status = 405;
+        res.set_content(R"({"error": "Method not allowed"})",
+                        "application/json");
+    };
+
+    server_.Get("/api/ingest/gtfs", method_not_allowed);
+    server_.Put("/api/ingest/gtfs", method_not_allowed);
+    server_.Delete("/api/ingest/gtfs", method_not_allowed);
+    server_.Patch("/api/ingest/gtfs", method_not_allowed);
 }
 
 void HttpAdapter::handle_list_layers(const httplib::Request& /*req*/,
@@ -164,6 +255,120 @@ void HttpAdapter::handle_query_features(const httplib::Request& req,
         GeoJsonSerializer::serialize_feature_collection(*result);
     res.status = 200;
     res.set_content(body, "application/json");
+}
+
+void HttpAdapter::handle_ingest_gtfs(const httplib::Request& req,
+                                     httplib::Response& res) {
+    set_common_headers(res);
+
+    // Check file field presence.
+    if (!req.form.has_file("file")) {
+        res.status = 400;
+        res.set_content(error_json("No file provided"), "application/json");
+        return;
+    }
+
+    const auto file = req.form.get_file("file");
+
+    // Validate content is not empty.
+    if (file.content.empty()) {
+        res.status = 400;
+        res.set_content(error_json("Uploaded file is empty"),
+                        "application/json");
+        return;
+    }
+
+    // Validate file size does not exceed 50 MB.
+    if (file.content.size() > kMaxUploadSize) {
+        res.status = 400;
+        res.set_content(
+            error_json("File exceeds the maximum allowed size of 50 MB"),
+            "application/json");
+        return;
+    }
+
+    // Write content to a temporary file with a unique name.
+    std::string temp_path =
+        (std::filesystem::temp_directory_path() /
+         ("garraiobide_upload_" +
+          std::to_string(reinterpret_cast<std::uintptr_t>(&req)) + ".zip"))
+            .string();
+
+    {
+        std::ofstream ofs(temp_path, std::ios::binary);
+        if (!ofs) {
+            res.status = 500;
+            res.set_content(error_json("Failed to write temporary file"),
+                            "application/json");
+            return;
+        }
+        ofs.write(file.content.data(),
+                  static_cast<std::streamsize>(file.content.size()));
+        if (!ofs) {
+            res.status = 500;
+            res.set_content(error_json("Failed to write temporary file"),
+                            "application/json");
+            return;
+        }
+    }
+
+    // RAII guard ensures temp file is removed in all paths.
+    TempFileGuard guard{temp_path};
+
+    // Derive layer prefix from uploaded filename.
+    std::string layer_prefix = derive_layer_prefix(file.filename);
+
+    // Call the service to import GTFS data.
+    auto result = service_.import_gtfs(temp_path, layer_prefix);
+    if (!result) {
+        switch (result.error()) {
+            case app::LayerServiceError::IngestionFailed:
+                res.status = 422;
+                res.set_content(error_json("GTFS ingestion failed"),
+                                "application/json");
+                return;
+            case app::LayerServiceError::PersistenceFailed:
+                res.status = 500;
+                res.set_content(
+                    error_json("Failed to persist ingested layers"),
+                    "application/json");
+                return;
+            case app::LayerServiceError::DuplicateLayer:
+                res.status = 409;
+                res.set_content(
+                    error_json("Layer already exists: " + layer_prefix),
+                    "application/json");
+                return;
+            default:
+                res.status = 500;
+                res.set_content(error_json("Internal server error"),
+                                "application/json");
+                return;
+        }
+    }
+
+    // Build success response.
+    std::string body = R"({"status":"ok","layers":[)";
+    bool first = true;
+    for (const auto& name : *result) {
+        if (!first) {
+            body += ",";
+        }
+        body += "\"" + name + "\"";
+        first = false;
+    }
+    body += "]}";
+
+    res.status = 200;
+    res.set_content(body, "application/json");
+}
+
+void HttpAdapter::handle_ingest_gtfs_options(const httplib::Request& /*req*/,
+                                             httplib::Response& res) {
+    res.set_header("Access-Control-Allow-Origin", "*");
+    res.set_header("Access-Control-Allow-Methods", "POST, OPTIONS");
+    res.set_header("Access-Control-Allow-Headers", "Content-Type");
+    res.status = 204;
 }
 
 }  // namespace garraiobide::adapters::http

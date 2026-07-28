@@ -95,4 +95,65 @@ LayerService::query_features(const core::domain::BoundingBox& extent) {
     return *result;
 }
 
+std::expected<std::vector<std::string>, LayerServiceError>
+LayerService::import_gtfs(const std::string& source,
+                          const std::string& layer_prefix) {
+    auto features_result = ingestion_.load_features(source);
+    if (!features_result) {
+        presentation_.show_error("Failed to ingest GTFS data from: " + source);
+        return std::unexpected(LayerServiceError::IngestionFailed);
+    }
+
+    // Partition features by geometry type: Point → stops, LineString → routes
+    std::vector<core::domain::GeoFeature> route_features;
+    std::vector<core::domain::GeoFeature> stop_features;
+
+    for (auto& feature : *features_result) {
+        if (std::holds_alternative<core::domain::Point>(feature.geometry)) {
+            stop_features.push_back(std::move(feature));
+        } else if (std::holds_alternative<core::domain::LineString>(feature.geometry)) {
+            route_features.push_back(std::move(feature));
+        }
+    }
+
+    std::string routes_name = layer_prefix + "_routes";
+    std::string stops_name = layer_prefix + "_stops";
+
+    // Persist routes layer
+    core::domain::Layer routes_layer{
+        .name = routes_name,
+        .scale = core::domain::SpatialScale::Urban,
+        .features = std::move(route_features),
+    };
+
+    auto routes_save = persistence_.save_layer(routes_layer);
+    if (!routes_save) {
+        if (routes_save.error() == core::ports::PersistenceError::DuplicateLayer) {
+            presentation_.show_error("Layer already exists: " + routes_name);
+            return std::unexpected(LayerServiceError::DuplicateLayer);
+        }
+        presentation_.show_error("Failed to persist layer: " + routes_name);
+        return std::unexpected(LayerServiceError::PersistenceFailed);
+    }
+
+    // Persist stops layer
+    core::domain::Layer stops_layer{
+        .name = stops_name,
+        .scale = core::domain::SpatialScale::Urban,
+        .features = std::move(stop_features),
+    };
+
+    auto stops_save = persistence_.save_layer(stops_layer);
+    if (!stops_save) {
+        if (stops_save.error() == core::ports::PersistenceError::DuplicateLayer) {
+            presentation_.show_error("Layer already exists: " + stops_name);
+            return std::unexpected(LayerServiceError::DuplicateLayer);
+        }
+        presentation_.show_error("Failed to persist layer: " + stops_name);
+        return std::unexpected(LayerServiceError::PersistenceFailed);
+    }
+
+    return std::vector<std::string>{routes_name, stops_name};
+}
+
 }  // namespace garraiobide::app

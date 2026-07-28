@@ -46,6 +46,11 @@ class LayerService {
     [[nodiscard]] std::expected<void, LayerServiceError>
     remove_layer(const std::string& name);
 
+    /// Import a GTFS source, producing separate route and stop layers.
+    /// Returns the names of created layers on success.
+    [[nodiscard]] std::expected<std::vector<std::string>, LayerServiceError>
+    import_gtfs(const std::string& source, const std::string& layer_prefix);
+
     /// Query features within an extent across all layers.
     [[nodiscard]] std::expected<std::vector<core::domain::GeoFeature>, LayerServiceError>
     query_features(const core::domain::BoundingBox& extent);

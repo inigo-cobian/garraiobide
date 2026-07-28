@@ -169,3 +169,60 @@ body {
   font-weight: 600;
   color: #1a1a1a;
 }
+
+/* Ingestion Panel - GTFS file upload */
+.ingestion-panel {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid #e5e7eb;
+}
+
+.ingestion-panel__title {
+  margin: 0 0 8px 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: #1a1a1a;
+}
+
+.ingestion-panel input[type="file"] {
+  display: block;
+  width: 100%;
+  font-size: 12px;
+  color: #333;
+  margin-bottom: 8px;
+}
+
+.ingestion-panel button {
+  display: block;
+  width: 100%;
+  padding: 6px 12px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #fff;
+  background-color: #2563eb;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.ingestion-panel button:hover:not(:disabled) {
+  background-color: #1d4ed8;
+}
+
+.ingestion-panel button:focus {
+  outline: 2px solid #2563eb;
+  outline-offset: 2px;
+}
+
+.ingestion-panel button:disabled {
+  background-color: #93c5fd;
+  cursor: not-allowed;
+}
+
+.ingestion-panel__status {
+  display: block;
+  margin-top: 6px;
+  font-size: 12px;
+  color: #555;
+}
