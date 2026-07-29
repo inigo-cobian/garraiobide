@@ -2,6 +2,7 @@
 
 #include <string>
 #include <chrono>
+#include <random>
 #include <thread>
 #include <vector>
 
@@ -106,7 +107,16 @@ class MongoIntegrationTest : public ::testing::Test {
    protected:
     void SetUp() override {
         connection_string_ = "mongodb://localhost:27017";
-        database_name_ = "integration_test_" + std::to_string(test_counter_++);
+        // ctest runs each TEST_F as its own process (via gtest_discover_tests)
+        // and the CI preset runs tests in parallel (execution.jobs: 4). A
+        // per-process static counter always starts at 0, so every parallel
+        // test previously collided on the same database name and could see
+        // another test's concurrent drop()/insert(). Use a random suffix
+        // instead, matching the approach in mongo_persistence_property_test.cc.
+        std::random_device rd;
+        std::uniform_int_distribution<uint64_t> dist;
+        std::mt19937_64 gen(rd());
+        database_name_ = "integration_test_" + std::to_string(dist(gen));
         adapter_ = std::make_unique<MongoPersistenceAdapter>(
             connection_string_, database_name_);
 
@@ -137,9 +147,6 @@ class MongoIntegrationTest : public ::testing::Test {
     std::string connection_string_;
     std::string database_name_;
     std::unique_ptr<MongoPersistenceAdapter> adapter_;
-
-   private:
-    static inline int test_counter_ = 0;
 };
 
 // =============================================================================
