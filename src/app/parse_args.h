@@ -1,8 +1,6 @@
-#ifndef GARRAIOBIDE_APP_PARSE_ARGS_H
-#define GARRAIOBIDE_APP_PARSE_ARGS_H
+#pragma once
 
 #include <expected>
-#include <string>
 
 #include "../app/app_config.h"
 
@@ -21,4 +19,3 @@ enum class ParseResult {
 
 }  // namespace garraiobide::app
 
-#endif  // GARRAIOBIDE_APP_PARSE_ARGS_H

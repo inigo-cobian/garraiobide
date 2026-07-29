@@ -1,5 +1,4 @@
-#ifndef GARRAIOBIDE_APP_APP_CONFIG_H
-#define GARRAIOBIDE_APP_APP_CONFIG_H
+#pragma once
 
 #include <cstdint>
 #include <string>
@@ -21,5 +20,3 @@ struct AppConfig {
 };
 
 }  // namespace garraiobide::app
-
-#endif  // GARRAIOBIDE_APP_APP_CONFIG_H
