@@ -161,13 +161,13 @@ TEST_F(MongoIntegrationTest, ValidConnectionSucceeds) {
     auto save_result = adapter_->save_layer(layer);
     ASSERT_TRUE(save_result.has_value()) << "Adapter should be operational after valid connection";
 
-    // Retry find_layer — under CI load, read-after-write may need time.
-    std::expected<Layer, PersistenceError> find_result;
-    for (int attempt = 0; attempt < 10; ++attempt) {
-        find_result = adapter_->find_layer("operational_test");
-        if (find_result.has_value()) break;
-        std::this_thread::sleep_for(std::chrono::milliseconds(200));
-    }
+    // Verify the layer appears in list_layers
+    auto list_result = adapter_->list_layers();
+    ASSERT_TRUE(list_result.has_value()) << "list_layers should succeed after save";
+    ASSERT_FALSE(list_result.value().empty())
+        << "list_layers should contain the saved layer, but got empty";
+
+    auto find_result = adapter_->find_layer("operational_test");
     ASSERT_TRUE(find_result.has_value())
         << "Adapter should retrieve saved layers (error: "
         << (find_result.error() == PersistenceError::NotFound ? "NotFound" : "ConnectionError")
