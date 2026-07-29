@@ -1,9 +1,11 @@
 #include "mongo_persistence_adapter.h"
 
+#include <chrono>
 #include <memory>
 #include <mutex>
 #include <stdexcept>
 #include <string>
+#include <thread>
 
 #include <bsoncxx/builder/basic/array.hpp>
 #include <bsoncxx/builder/basic/document.hpp>
@@ -16,6 +18,8 @@
 #include <mongocxx/instance.hpp>
 #include <mongocxx/options/find.hpp>
 #include <mongocxx/options/index.hpp>
+#include <mongocxx/options/insert.hpp>
+#include <mongocxx/write_concern.hpp>
 #include <mongocxx/pipeline.hpp>
 #include <mongocxx/uri.hpp>
 
@@ -271,8 +275,23 @@ MongoPersistenceAdapter::MongoPersistenceAdapter(std::string connection_string,
     db_ = client_[database_name_];
     layers_collection_ = db_["layers"];
 
-    // Best-effort index creation; errors are silently ignored at construction.
-    (void)ensure_indexes();
+    // Retry index creation to handle CI timing where MongoDB may not be fully ready.
+    constexpr int kMaxIndexRetries = 3;
+    constexpr auto kIndexRetryDelay = std::chrono::milliseconds(200);
+    bool indexes_created = false;
+    for (int attempt = 0; attempt < kMaxIndexRetries; ++attempt) {
+        auto idx_result = ensure_indexes();
+        if (idx_result.has_value()) {
+            indexes_created = true;
+            break;
+        }
+        if (attempt < kMaxIndexRetries - 1) {
+            std::this_thread::sleep_for(kIndexRetryDelay);
+        }
+    }
+    if (!indexes_created) {
+        throw std::runtime_error("Failed to create required indexes after retries");
+    }
 }
 
 std::expected<void, PersistenceError> MongoPersistenceAdapter::ensure_indexes() {
@@ -307,7 +326,23 @@ MongoPersistenceAdapter::save_layer(const core::domain::Layer& layer) {
 
     try {
         auto doc = layer_to_bson(layer);
-        layers_collection_.insert_one(doc.view());
+
+        // Add explicit write concern to ensure acknowledged write
+        mongocxx::options::insert insert_opts;
+        mongocxx::write_concern wc;
+        wc.acknowledge_level(mongocxx::write_concern::level::k_majority);
+        insert_opts.write_concern(wc);
+
+        auto result = layers_collection_.insert_one(doc.view(), insert_opts);
+
+        // Validate insert result
+        if (!result) {
+            return std::unexpected(PersistenceError::WriteError);
+        }
+        if (result->inserted_id().type() == bsoncxx::type::k_null) {
+            return std::unexpected(PersistenceError::WriteError);
+        }
+
         return {};
     } catch (const mongocxx::bulk_write_exception& e) {
         // Error code 11000 = duplicate key violation

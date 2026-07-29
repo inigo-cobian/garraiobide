@@ -721,5 +721,244 @@ TEST_F(MongoPropertyTest, Property7_SpatialQueryCorrectness) {
     }
 }
 
+// =============================================================================
+// Preservation Property: Empty name → WriteError
+// Validates: Requirements 3.1
+// =============================================================================
+
+TEST_F(MongoPropertyTest, Preservation_EmptyNameReturnsWriteError) {
+    constexpr int kIterations = 50;
+    for (int i = 0; i < kIterations; ++i) {
+        // Generate a layer with empty name but valid random features/geometry
+        auto layer = random_layer();
+        layer.name = "";  // Force empty name
+
+        auto save_result = adapter_->save_layer(layer);
+        ASSERT_FALSE(save_result.has_value())
+            << "Iteration " << i << ": save_layer with empty name should fail";
+        EXPECT_EQ(save_result.error(), PersistenceError::WriteError)
+            << "Iteration " << i << ": expected WriteError for empty name";
+    }
+}
+
+// =============================================================================
+// Preservation Property: Empty features vector → persist and retrieve
+// Validates: Requirements 3.3
+// =============================================================================
+
+TEST_F(MongoPropertyTest, Preservation_EmptyFeaturesLayerPersists) {
+    constexpr int kIterations = 50;
+    for (int i = 0; i < kIterations; ++i) {
+        // Generate a layer with valid name but empty features
+        Layer layer;
+        layer.name = random_alphanumeric(1, 20);
+        layer.scale = random_scale();
+        layer.features.clear();  // Explicitly empty
+
+        auto save_result = adapter_->save_layer(layer);
+        ASSERT_TRUE(save_result.has_value())
+            << "Iteration " << i << ": save_layer with empty features should succeed";
+
+        // Verify it can be retrieved
+        auto find_result = adapter_->find_layer(layer.name);
+        ASSERT_TRUE(find_result.has_value())
+            << "Iteration " << i << ": find_layer should succeed after saving empty-features layer";
+
+        EXPECT_EQ(find_result.value().name, layer.name)
+            << "Iteration " << i << ": retrieved layer name mismatch";
+        EXPECT_TRUE(find_result.value().features.empty())
+            << "Iteration " << i << ": retrieved layer should have empty features";
+
+        // Clean up
+        (void)adapter_->remove_layer(layer.name);
+    }
+}
+
+// =============================================================================
+// Preservation Property: Empty database → list_layers returns empty vector
+// Validates: Requirements 3.4
+// =============================================================================
+
+TEST_F(MongoPropertyTest, Preservation_EmptyDatabaseListLayersReturnsEmpty) {
+    // On a fresh database (from SetUp), list_layers should return empty
+    auto list_result = adapter_->list_layers();
+    ASSERT_TRUE(list_result.has_value())
+        << "list_layers on empty database should not error";
+    EXPECT_TRUE(list_result.value().empty())
+        << "list_layers on empty database should return empty vector, got "
+        << list_result.value().size() << " items";
+}
+
+// =============================================================================
+// Preservation Property: Point geometry round-trips correctly
+// Validates: Requirements 3.5, 3.6
+// =============================================================================
+
+TEST_F(MongoPropertyTest, Preservation_PointGeometryRoundTrip) {
+    constexpr int kIterations = 50;
+    for (int i = 0; i < kIterations; ++i) {
+        Layer layer;
+        layer.name = "point_rt_" + std::to_string(i) + "_" + random_alphanumeric(1, 8);
+        layer.scale = random_scale();
+
+        GeoFeature feature;
+        feature.id = "pt_" + std::to_string(i);
+        feature.geometry = random_point();
+        feature.properties = random_properties();
+        layer.features.push_back(feature);
+
+        auto save_result = adapter_->save_layer(layer);
+        ASSERT_TRUE(save_result.has_value())
+            << "Iteration " << i << ": save_layer with Point geometry failed";
+
+        auto find_result = adapter_->find_layer(layer.name);
+        ASSERT_TRUE(find_result.has_value())
+            << "Iteration " << i << ": find_layer failed for Point layer";
+
+        ASSERT_EQ(find_result.value().features.size(), 1u)
+            << "Iteration " << i << ": expected 1 feature";
+
+        EXPECT_TRUE(geometry_equal(feature.geometry, find_result.value().features[0].geometry))
+            << "Iteration " << i << ": Point geometry mismatch after round-trip";
+
+        (void)adapter_->remove_layer(layer.name);
+    }
+}
+
+// =============================================================================
+// Preservation Property: LineString geometry round-trips correctly
+// Validates: Requirements 3.5, 3.6
+// =============================================================================
+
+TEST_F(MongoPropertyTest, Preservation_LineStringGeometryRoundTrip) {
+    constexpr int kIterations = 50;
+    for (int i = 0; i < kIterations; ++i) {
+        Layer layer;
+        layer.name = "ls_rt_" + std::to_string(i) + "_" + random_alphanumeric(1, 8);
+        layer.scale = random_scale();
+
+        GeoFeature feature;
+        feature.id = "ls_" + std::to_string(i);
+        feature.geometry = random_linestring();
+        feature.properties = random_properties();
+        layer.features.push_back(feature);
+
+        auto save_result = adapter_->save_layer(layer);
+        ASSERT_TRUE(save_result.has_value())
+            << "Iteration " << i << ": save_layer with LineString geometry failed";
+
+        auto find_result = adapter_->find_layer(layer.name);
+        ASSERT_TRUE(find_result.has_value())
+            << "Iteration " << i << ": find_layer failed for LineString layer";
+
+        ASSERT_EQ(find_result.value().features.size(), 1u)
+            << "Iteration " << i << ": expected 1 feature";
+
+        EXPECT_TRUE(geometry_equal(feature.geometry, find_result.value().features[0].geometry))
+            << "Iteration " << i << ": LineString geometry mismatch after round-trip";
+
+        (void)adapter_->remove_layer(layer.name);
+    }
+}
+
+// =============================================================================
+// Preservation Property: Polygon geometry round-trips correctly
+// Validates: Requirements 3.5, 3.6
+// =============================================================================
+
+TEST_F(MongoPropertyTest, Preservation_PolygonGeometryRoundTrip) {
+    constexpr int kIterations = 50;
+    for (int i = 0; i < kIterations; ++i) {
+        Layer layer;
+        layer.name = "poly_rt_" + std::to_string(i) + "_" + random_alphanumeric(1, 8);
+        layer.scale = random_scale();
+
+        GeoFeature feature;
+        feature.id = "poly_" + std::to_string(i);
+        feature.geometry = random_polygon();
+        feature.properties = random_properties();
+        layer.features.push_back(feature);
+
+        auto save_result = adapter_->save_layer(layer);
+        ASSERT_TRUE(save_result.has_value())
+            << "Iteration " << i << ": save_layer with Polygon geometry failed";
+
+        auto find_result = adapter_->find_layer(layer.name);
+        ASSERT_TRUE(find_result.has_value())
+            << "Iteration " << i << ": find_layer failed for Polygon layer";
+
+        ASSERT_EQ(find_result.value().features.size(), 1u)
+            << "Iteration " << i << ": expected 1 feature";
+
+        EXPECT_TRUE(geometry_equal(feature.geometry, find_result.value().features[0].geometry))
+            << "Iteration " << i << ": Polygon geometry mismatch after round-trip";
+
+        (void)adapter_->remove_layer(layer.name);
+    }
+}
+
+// =============================================================================
+// Bug Condition Exploration: save_layer success implies persistence
+// Validates: Requirements 1.1, 1.3, 1.4
+//
+// This test encodes the EXPECTED behavior: if save_layer() reports success,
+// the document MUST actually be persisted (list_layers() contains the name,
+// find_layer() retrieves the layer).
+//
+// On UNFIXED code in CI (MongoDB 7 with index issues), this test is expected
+// to FAIL because save_layer() returns success but insert_one() silently fails.
+// =============================================================================
+
+TEST_F(MongoPropertyTest, BugCondition_SaveLayerSuccessImpliesPersistence) {
+    constexpr int kIterations = 50;
+    for (int i = 0; i < kIterations; ++i) {
+        auto layer = random_layer();
+
+        // Ensure the layer has at least one feature with geometry to exercise
+        // the 2dsphere index path (where the bug manifests)
+        if (layer.features.empty()) {
+            GeoFeature f;
+            f.id = "bug_probe_" + std::to_string(i);
+            f.geometry = random_geometry();
+            f.properties = random_properties();
+            layer.features.push_back(std::move(f));
+        }
+
+        auto save_result = adapter_->save_layer(layer);
+
+        // We only assert on the persistence guarantee IF save_layer() reports success.
+        // The bug condition is: save_layer() returns success but the document isn't persisted.
+        if (save_result.has_value()) {
+            // Property: save_layer() success ⟹ list_layers() contains the layer name
+            auto list_result = adapter_->list_layers();
+            ASSERT_TRUE(list_result.has_value())
+                << "Iteration " << i << ": list_layers() failed after successful save";
+
+            const auto& names = list_result.value();
+            bool found_in_list = std::find(names.begin(), names.end(), layer.name) != names.end();
+            EXPECT_TRUE(found_in_list)
+                << "Iteration " << i << ": save_layer() returned success for '"
+                << layer.name << "' but list_layers() does not contain it. "
+                << "list_layers() returned " << names.size() << " names. "
+                << "BUG CONDITION: save reports success but document not persisted.";
+
+            // Property: save_layer() success ⟹ find_layer(name) retrieves the layer
+            auto find_result = adapter_->find_layer(layer.name);
+            EXPECT_TRUE(find_result.has_value())
+                << "Iteration " << i << ": save_layer() returned success for '"
+                << layer.name << "' but find_layer() returned error. "
+                << "BUG CONDITION: save reports success but document not persisted.";
+
+            if (find_result.has_value()) {
+                EXPECT_EQ(find_result.value().name, layer.name)
+                    << "Iteration " << i << ": retrieved layer name mismatch";
+            }
+        }
+
+        // Clean up for next iteration
+        (void)adapter_->remove_layer(layer.name);
+    }
+}
+
 }  // namespace
 }  // namespace garraiobide::adapters::persistence
