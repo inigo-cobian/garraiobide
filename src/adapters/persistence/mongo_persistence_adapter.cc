@@ -330,7 +330,7 @@ MongoPersistenceAdapter::save_layer(const core::domain::Layer& layer) {
         // Add explicit write concern to ensure acknowledged write
         mongocxx::options::insert insert_opts;
         mongocxx::write_concern wc;
-        wc.acknowledge_level(mongocxx::write_concern::level::k_majority);
+        wc.acknowledge_level(mongocxx::write_concern::level::k_acknowledged);
         insert_opts.write_concern(wc);
 
         auto result = layers_collection_.insert_one(doc.view(), insert_opts);
