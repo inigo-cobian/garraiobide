@@ -19,6 +19,9 @@ class HttpAdapter {
     /// Stop the server (thread-safe).
     void stop();
 
+    /// Returns true once the server is accepting connections (thread-safe).
+    bool is_running() const { return server_.is_running(); }
+
    private:
     void register_routes();
     void handle_list_layers(const httplib::Request& req,

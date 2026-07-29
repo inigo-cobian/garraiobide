@@ -1,4 +1,4 @@
-name: CI
+name: Integration Tests
 
 on:
   push:
@@ -18,12 +18,24 @@ on:
     - cron: "0 5 * * 0"
 
 jobs:
-  build-and-test:
+  integration-tests:
     # Run always UNLESS it's a push event whose commit message does NOT contain '[ci run]'.
     if: >-
       github.event_name != 'push' ||
       contains(github.event.head_commit.message, '[ci run]')
     runs-on: ubuntu-latest
+
+    services:
+      mongodb:
+        image: mongo:7
+        ports:
+          - 27017:27017
+        options: >-
+          --health-cmd "mongosh --eval 'db.runCommand({ping:1})'"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
     steps:
       - uses: actions/checkout@v7
 
@@ -50,8 +62,8 @@ jobs:
       - name: Build
         run: cmake --build --preset conan-debug --parallel
 
-      - name: Run tests
-        run: ctest --preset conan-debug --output-on-failure --exclude-regex "Mongo(Integration|Property)Test"
+      - name: Run integration tests
+        run: ctest --preset conan-debug --output-on-failure --tests-regex "Mongo(Integration|Property)Test"
 
       - name: Generate coverage report (LCOV)
         run: |
@@ -66,4 +78,5 @@ jobs:
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: coverage.info
+          flags: integration
           fail_ci_if_error: false

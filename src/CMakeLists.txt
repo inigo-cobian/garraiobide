@@ -6,6 +6,7 @@ add_library(garraiobide_src
         adapters/ingestion/gtfs/gtfs_ingestion_adapter.cc
         adapters/persistence/file_persistence_adapter.cc
         adapters/persistence/mock_persistence_adapter.cc
+        adapters/persistence/mongo_persistence_adapter.cc
         adapters/ui/mock_presentation_adapter.cc
         app/layer_service.cc
         app/parse_args.cc
@@ -18,6 +19,7 @@ find_package(libzip REQUIRED)
 find_package(nlohmann_json REQUIRED)
 find_package(httplib REQUIRED)
 find_package(args REQUIRED)
+find_package(mongocxx REQUIRED)
 
 target_link_libraries(garraiobide_src
         PUBLIC
@@ -25,6 +27,8 @@ target_link_libraries(garraiobide_src
         libzip::zip
         nlohmann_json::nlohmann_json
         httplib::httplib
+        mongo::mongocxx_static
+        mongo::bsoncxx_static
 )
 
 add_executable(garraiobide_app server/main.cc)

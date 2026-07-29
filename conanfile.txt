@@ -4,6 +4,7 @@ libzip/1.10.1
 nlohmann_json/3.11.3
 gtest/1.14.0
 cpp-httplib/0.47.0
+mongo-cxx-driver/3.10.2
 
 [generators]
 CMakeDeps
