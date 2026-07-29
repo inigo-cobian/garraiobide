@@ -27,7 +27,15 @@ using CsvRow = std::unordered_map<std::string, std::string>;
     bool in_quotes = false;
 
     const std::size_t len = content.size();
+
+    // Skip UTF-8 BOM if present
     std::size_t i = 0;
+    if (len >= 3
+        && static_cast<unsigned char>(content[0]) == 0xEF
+        && static_cast<unsigned char>(content[1]) == 0xBB
+        && static_cast<unsigned char>(content[2]) == 0xBF) {
+        i = 3;
+    }
 
     while (i < len) {
         char c = content[i];
@@ -92,8 +100,20 @@ using CsvRow = std::unordered_map<std::string, std::string>;
         return rows;
     }
 
-    // First record is the header
-    const auto& header = records[0];
+    // Trim whitespace from header field names
+    auto trim = [](const std::string& s) -> std::string {
+        const char* ws = " \t\r";
+        auto start = s.find_first_not_of(ws);
+        if (start == std::string::npos) return "";
+        auto end = s.find_last_not_of(ws);
+        return s.substr(start, end - start + 1);
+    };
+
+    std::vector<std::string> headers;
+    headers.reserve(records[0].size());
+    for (const auto& h : records[0]) {
+        headers.push_back(trim(h));
+    }
 
     // Process data records
     for (std::size_t r = 1; r < records.size(); ++r) {
@@ -105,8 +125,8 @@ using CsvRow = std::unordered_map<std::string, std::string>;
         }
 
         CsvRow row;
-        for (std::size_t col = 0; col < header.size() && col < record.size(); ++col) {
-            row[header[col]] = record[col];
+        for (std::size_t col = 0; col < headers.size() && col < record.size(); ++col) {
+            row[headers[col]] = record[col];
         }
         rows.push_back(std::move(row));
     }
