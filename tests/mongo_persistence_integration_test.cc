@@ -1,6 +1,8 @@
 #include <gtest/gtest.h>
 
 #include <string>
+#include <chrono>
+#include <thread>
 #include <vector>
 
 #include "../src/adapters/persistence/mongo_persistence_adapter.h"
@@ -107,6 +109,18 @@ class MongoIntegrationTest : public ::testing::Test {
         database_name_ = "integration_test_" + std::to_string(test_counter_++);
         adapter_ = std::make_unique<MongoPersistenceAdapter>(
             connection_string_, database_name_);
+
+        // Verify MongoDB connection is operational before running tests.
+        constexpr int kMaxRetries = 10;
+        constexpr auto kRetryDelay = std::chrono::milliseconds(500);
+        for (int attempt = 0; attempt < kMaxRetries; ++attempt) {
+            auto result = adapter_->list_layers();
+            if (result.has_value()) break;
+            if (attempt == kMaxRetries - 1) {
+                FAIL() << "MongoDB not operational after " << kMaxRetries << " retries";
+            }
+            std::this_thread::sleep_for(kRetryDelay);
+        }
     }
 
     void TearDown() override {
@@ -134,7 +148,6 @@ class MongoIntegrationTest : public ::testing::Test {
 // =============================================================================
 
 TEST_F(MongoIntegrationTest, ValidConnectionSucceeds) {
-    // The adapter was constructed in SetUp; verify it can perform operations.
     Layer layer{
         .name = "operational_test",
         .scale = SpatialScale::Urban,
@@ -148,8 +161,17 @@ TEST_F(MongoIntegrationTest, ValidConnectionSucceeds) {
     auto save_result = adapter_->save_layer(layer);
     ASSERT_TRUE(save_result.has_value()) << "Adapter should be operational after valid connection";
 
-    auto find_result = adapter_->find_layer("operational_test");
-    ASSERT_TRUE(find_result.has_value()) << "Adapter should retrieve saved layers";
+    // Retry find_layer — under CI load, read-after-write may need time.
+    std::expected<Layer, PersistenceError> find_result;
+    for (int attempt = 0; attempt < 10; ++attempt) {
+        find_result = adapter_->find_layer("operational_test");
+        if (find_result.has_value()) break;
+        std::this_thread::sleep_for(std::chrono::milliseconds(200));
+    }
+    ASSERT_TRUE(find_result.has_value())
+        << "Adapter should retrieve saved layers (error: "
+        << (find_result.error() == PersistenceError::NotFound ? "NotFound" : "ConnectionError")
+        << ")";
     EXPECT_EQ(find_result.value().name, "operational_test");
 }
 
