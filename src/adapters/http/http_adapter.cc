@@ -81,11 +81,6 @@ std::string derive_layer_prefix(const std::string& filename) {
     return cleaned.empty() ? "gtfs" : cleaned;
 }
 
-/// Set common headers on all responses.
-void set_common_headers(httplib::Response& res) {
-    res.set_header("Access-Control-Allow-Origin", "*");
-}
-
 /// Try to parse a string as a double. Returns false on failure.
 bool parse_double(const std::string& str, double& out) {
     const char* begin = str.data();
@@ -99,6 +94,14 @@ bool parse_double(const std::string& str, double& out) {
 HttpAdapter::HttpAdapter(app::LayerService& service) : service_(service) {}
 
 void HttpAdapter::listen(std::uint16_t port) {
+    // Default headers are applied to every response (including 404s) before
+    // routing, so the browser always sees the CORS allow-origin header.
+    server_.set_default_headers({
+        {"Access-Control-Allow-Origin", "*"},
+        {"Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, PATCH, OPTIONS"},
+        {"Access-Control-Allow-Headers", "Content-Type"},
+    });
+
     register_routes();
     server_.listen("0.0.0.0", port);
 }
@@ -136,7 +139,6 @@ void HttpAdapter::register_routes() {
     // Method-not-allowed handlers for /api/ingest/gtfs.
     auto method_not_allowed = [](const httplib::Request& /*req*/,
                                  httplib::Response& res) {
-        res.set_header("Access-Control-Allow-Origin", "*");
         res.status = 405;
         res.set_content(R"({"error": "Method not allowed"})",
                         "application/json");
@@ -150,8 +152,6 @@ void HttpAdapter::register_routes() {
 
 void HttpAdapter::handle_list_layers(const httplib::Request& /*req*/,
                                      httplib::Response& res) {
-    set_common_headers(res);
-
     auto result = service_.list_layers();
     if (!result) {
         res.status = 500;
@@ -178,8 +178,6 @@ void HttpAdapter::handle_list_layers(const httplib::Request& /*req*/,
 
 void HttpAdapter::handle_get_layer(const httplib::Request& req,
                                    httplib::Response& res) {
-    set_common_headers(res);
-
     std::string name = req.matches[1];
 
     auto result = service_.show_layer(name);
@@ -203,8 +201,6 @@ void HttpAdapter::handle_get_layer(const httplib::Request& req,
 
 void HttpAdapter::handle_query_features(const httplib::Request& req,
                                         httplib::Response& res) {
-    set_common_headers(res);
-
     // Extract query parameters.
     std::string min_lat_str = req.get_param_value("min_lat");
     std::string min_lng_str = req.get_param_value("min_lng");
@@ -259,8 +255,6 @@ void HttpAdapter::handle_query_features(const httplib::Request& req,
 
 void HttpAdapter::handle_ingest_gtfs(const httplib::Request& req,
                                      httplib::Response& res) {
-    set_common_headers(res);
-
     // Check file field presence.
     if (!req.form.has_file("file")) {
         res.status = 400;
@@ -365,9 +359,7 @@ void HttpAdapter::handle_ingest_gtfs(const httplib::Request& req,
 
 void HttpAdapter::handle_ingest_gtfs_options(const httplib::Request& /*req*/,
                                              httplib::Response& res) {
-    res.set_header("Access-Control-Allow-Origin", "*");
-    res.set_header("Access-Control-Allow-Methods", "POST, OPTIONS");
-    res.set_header("Access-Control-Allow-Headers", "Content-Type");
+    // CORS headers are applied globally via set_default_headers.
     res.status = 204;
 }
 
