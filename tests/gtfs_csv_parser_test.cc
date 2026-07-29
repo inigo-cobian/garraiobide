@@ -192,5 +192,123 @@ TEST(GtfsCsvParserTest, GtfsShapePtLatLon_CoordinateFieldExtraction) {
     EXPECT_LT(seq1, seq2);
 }
 
+// =============================================================================
+// Property 2: Preservation — Non-BOM CSV Parsing Unchanged
+// For any CSV content that does NOT start with the UTF-8 BOM sequence,
+// the parse_csv() function preserves existing behavior: empty inputs,
+// header-only files, LF-only endings, quoting, and multi-column data.
+// **Validates: Requirements 3.1, 3.2, 3.3, 3.4, 3.5**
+// =============================================================================
+
+TEST(GtfsCsvParserPreservationTest, EmptyInput_ReturnsEmptyVector) {
+    // Requirement 3.4: Empty CSV input returns empty result set
+    std::string csv = "";
+    auto rows = parse_csv(csv);
+    EXPECT_TRUE(rows.empty());
+}
+
+TEST(GtfsCsvParserPreservationTest, HeaderOnly_ReturnsEmptyVector) {
+    // Requirement 3.1: Header-only CSV (no data rows) returns empty vector
+    std::string csv = "id,name,value\n";
+    auto rows = parse_csv(csv);
+    EXPECT_TRUE(rows.empty());
+}
+
+TEST(GtfsCsvParserPreservationTest, LfOnlyLineEndings_ParsesCorrectly) {
+    // Requirement 3.1: CSV with only LF endings parses correctly
+    std::string csv = "x,y,z\n10,20,30\n40,50,60\n";
+    auto rows = parse_csv(csv);
+
+    ASSERT_EQ(rows.size(), 2u);
+    EXPECT_EQ(rows[0].at("x"), "10");
+    EXPECT_EQ(rows[0].at("y"), "20");
+    EXPECT_EQ(rows[0].at("z"), "30");
+    EXPECT_EQ(rows[1].at("x"), "40");
+    EXPECT_EQ(rows[1].at("y"), "50");
+    EXPECT_EQ(rows[1].at("z"), "60");
+}
+
+TEST(GtfsCsvParserPreservationTest, MixedQuotingStyles_ParsesCorrectly) {
+    // Requirement 3.2: Quoted fields with commas and escaped quotes
+    std::string csv = "id,desc,val\n1,\"has, comma\",100\n2,plain,200\n3,\"with \"\"quotes\"\"\",300\n";
+    auto rows = parse_csv(csv);
+
+    ASSERT_EQ(rows.size(), 3u);
+    EXPECT_EQ(rows[0].at("id"), "1");
+    EXPECT_EQ(rows[0].at("desc"), "has, comma");
+    EXPECT_EQ(rows[0].at("val"), "100");
+    EXPECT_EQ(rows[1].at("id"), "2");
+    EXPECT_EQ(rows[1].at("desc"), "plain");
+    EXPECT_EQ(rows[1].at("val"), "200");
+    EXPECT_EQ(rows[2].at("id"), "3");
+    EXPECT_EQ(rows[2].at("desc"), "with \"quotes\"");
+    EXPECT_EQ(rows[2].at("val"), "300");
+}
+
+TEST(GtfsCsvParserPreservationTest, SecondColumnUnaffected_AlwaysParsesCorrectly) {
+    // Requirement 3.5: Second and subsequent columns are always correct
+    std::string csv = "first,second,third\nalpha,beta,gamma\n";
+    auto rows = parse_csv(csv);
+
+    ASSERT_EQ(rows.size(), 1u);
+    EXPECT_EQ(rows[0].at("first"), "alpha");
+    EXPECT_EQ(rows[0].at("second"), "beta");
+    EXPECT_EQ(rows[0].at("third"), "gamma");
+}
+
+// =============================================================================
+// Property 1: Bug Condition — BOM Corrupts First Header Field
+// CSV content prefixed with UTF-8 BOM (\xEF\xBB\xBF) should still allow
+// clean header lookups. On unfixed code, the BOM bytes become part of the
+// first header field name, causing std::out_of_range on lookup.
+// **Validates: Requirements 1.1, 1.2, 1.3**
+// =============================================================================
+
+TEST(GtfsCsvParserBomTest, BomSimpleCsv_FirstHeaderLookupSucceeds) {
+    // BOM + simple two-column CSV
+    std::string csv = "\xEF\xBB\xBF" "id,name\n1,Alice";
+    auto rows = parse_csv(csv);
+
+    ASSERT_EQ(rows.size(), 1u);
+    // On unfixed code, the key is "\xEF\xBB\xBFid" so .at("id") throws out_of_range
+    EXPECT_EQ(rows[0].at("id"), "1");
+    EXPECT_EQ(rows[0].at("name"), "Alice");
+}
+
+TEST(GtfsCsvParserBomTest, BomGtfsStops_StopIdLookupSucceeds) {
+    // BOM + GTFS-style stops.txt content
+    std::string csv = "\xEF\xBB\xBF" "stop_id,stop_name,stop_lat,stop_lon\nS001,Moyua,43.26,-2.93";
+    auto rows = parse_csv(csv);
+
+    ASSERT_EQ(rows.size(), 1u);
+    // On unfixed code, the key is "\xEF\xBB\xBFstop_id" so .at("stop_id") throws
+    EXPECT_EQ(rows[0].at("stop_id"), "S001");
+    EXPECT_EQ(rows[0].at("stop_name"), "Moyua");
+    EXPECT_EQ(rows[0].at("stop_lat"), "43.26");
+    EXPECT_EQ(rows[0].at("stop_lon"), "-2.93");
+}
+
+TEST(GtfsCsvParserBomTest, BomWithCrlf_FirstHeaderLookupSucceeds) {
+    // BOM + CRLF line endings
+    std::string csv = "\xEF\xBB\xBF" "a,b\r\n1,2\r\n";
+    auto rows = parse_csv(csv);
+
+    ASSERT_EQ(rows.size(), 1u);
+    // On unfixed code, the key is "\xEF\xBB\xBFa" so .at("a") throws
+    EXPECT_EQ(rows[0].at("a"), "1");
+    EXPECT_EQ(rows[0].at("b"), "2");
+}
+
+TEST(GtfsCsvParserBomTest, BomGtfsRoutes_RouteIdLookupSucceeds) {
+    // BOM + GTFS-style routes.txt content
+    std::string csv = "\xEF\xBB\xBF" "route_id,route_short_name\nR1,L1";
+    auto rows = parse_csv(csv);
+
+    ASSERT_EQ(rows.size(), 1u);
+    // On unfixed code, the key is "\xEF\xBB\xBFroute_id" so .at("route_id") throws
+    EXPECT_EQ(rows[0].at("route_id"), "R1");
+    EXPECT_EQ(rows[0].at("route_short_name"), "L1");
+}
+
 }  // namespace
 }  // namespace garraiobide::adapters::ingestion::gtfs
