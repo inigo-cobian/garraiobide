@@ -147,12 +147,7 @@ class MongoIntegrationTest : public ::testing::Test {
 // Validates: Requirement 1.1
 // =============================================================================
 
-// DISABLED: This test is flaky in CI — MongoDB service containers may not have
-// fully committed writes by the time list_layers() is called, causing sporadic
-// empty results despite save_layer() reporting success. The underlying behavior
-// is now covered by MongoPropertyTest.BugCondition_SaveLayerSuccessImpliesPersistence
-// which runs 50 iterations and validates the same property reliably.
-TEST_F(MongoIntegrationTest, DISABLED_ValidConnectionSucceeds) {
+TEST_F(MongoIntegrationTest, ValidConnectionSucceeds) {
     Layer layer{
         .name = "operational_test",
         .scale = SpatialScale::Urban,
@@ -251,10 +246,7 @@ TEST_F(MongoIntegrationTest, EmptyLayerNameReturnsWriteError) {
 // Validates: Requirement 2.6
 // =============================================================================
 
-// DISABLED: Flaky in CI — write concern timing on standalone MongoDB service
-// containers causes find_layer() to return NotFound immediately after save.
-// Covered by MongoPropertyTest.Preservation_EmptyFeaturesLayerPersists.
-TEST_F(MongoIntegrationTest, DISABLED_EmptyFeaturesVectorRoundTrip) {
+TEST_F(MongoIntegrationTest, EmptyFeaturesVectorRoundTrip) {
     Layer layer{
         .name = "empty_features_layer",
         .scale = SpatialScale::Urban,
@@ -315,10 +307,7 @@ TEST_F(MongoIntegrationTest, InvertedBoundingBoxReturnsEmpty) {
 // Validates: Requirements 7.1, 7.2, 7.3
 // =============================================================================
 
-// DISABLED: Flaky in CI — write concern timing on standalone MongoDB service
-// containers causes find_layer() to return NotFound immediately after save.
-// Covered by MongoPropertyTest.Preservation_PointGeometryRoundTrip.
-TEST_F(MongoIntegrationTest, DISABLED_PointGeometryRoundTrip) {
+TEST_F(MongoIntegrationTest, PointGeometryRoundTrip) {
     Layer layer{
         .name = "point_rt",
         .scale = SpatialScale::Urban,
@@ -361,10 +350,7 @@ TEST_F(MongoIntegrationTest, LineStringGeometryRoundTrip) {
         << "LineString geometry should round-trip exactly";
 }
 
-// DISABLED: Flaky in CI — write concern timing on standalone MongoDB service
-// containers causes find_layer() to return NotFound immediately after save.
-// Covered by MongoPropertyTest.Preservation_PolygonGeometryRoundTrip.
-TEST_F(MongoIntegrationTest, DISABLED_PolygonGeometryRoundTrip) {
+TEST_F(MongoIntegrationTest, PolygonGeometryRoundTrip) {
     Layer layer{
         .name = "polygon_rt",
         .scale = SpatialScale::Urban,

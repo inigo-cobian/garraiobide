@@ -327,10 +327,12 @@ MongoPersistenceAdapter::save_layer(const core::domain::Layer& layer) {
     try {
         auto doc = layer_to_bson(layer);
 
-        // Add explicit write concern to ensure acknowledged write
+        // Add explicit write concern: journal=true guarantees the write is
+        // durable and visible to subsequent reads on the same connection,
+        // which prevents flaky read-after-write failures in CI.
         mongocxx::options::insert insert_opts;
         mongocxx::write_concern wc;
-        wc.acknowledge_level(mongocxx::write_concern::level::k_acknowledged);
+        wc.journal(true);
         insert_opts.write_concern(wc);
 
         auto result = layers_collection_.insert_one(doc.view(), insert_opts);
