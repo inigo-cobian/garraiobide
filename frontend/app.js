@@ -6,24 +6,18 @@
   // ---------------------------------------------------------------------------
   var API_BASE = 'http://localhost:8080';
 
-  // ---------------------------------------------------------------------------
-  // Map Initialization (Req 6.1)
-  // ---------------------------------------------------------------------------
+  // Map Initialization
   var map = L.map('map').setView([43.26, -2.93], 13);
 
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
   }).addTo(map);
 
-  // ---------------------------------------------------------------------------
   // State
-  // ---------------------------------------------------------------------------
   var activeLayers = {};         // { layerName: L.GeoJSON } — multiple layers on the map
   var queryResultsLayer = null;  // L.GeoJSON layer for spatial query results
 
-  // ---------------------------------------------------------------------------
-  // Notification System (Req 6.6, 8.5)
-  // ---------------------------------------------------------------------------
+  // Notification System
   var notificationsEl = document.getElementById('notifications');
 
   function showNotification(message, type) {
@@ -42,9 +36,7 @@
     }, 3000);
   }
 
-  // ---------------------------------------------------------------------------
-  // Popup Generation (Req 7.1, 7.2)
-  // ---------------------------------------------------------------------------
+  // Popup Generation
   function buildPopupContent(feature) {
     var props = feature.properties || {};
     var id = feature.id;
@@ -74,9 +66,7 @@
     return div.innerHTML;
   }
 
-  // ---------------------------------------------------------------------------
-  // GeoJSON Rendering Helpers (Req 6.3, 6.4, 7.1, 7.3)
-  // ---------------------------------------------------------------------------
+  // GeoJSON Rendering Helpers
   var DEFAULT_ROUTE_COLOR = '#2563eb';
 
   function isStopsLayer(name) {
@@ -162,16 +152,12 @@
     });
   }
 
-  // ---------------------------------------------------------------------------
-  // Close popup on map click (Req 7.3)
-  // ---------------------------------------------------------------------------
+  // Close popup on map click
   map.on('click', function () {
     map.closePopup();
   });
 
-  // ---------------------------------------------------------------------------
-  // Layer Fetching and Selection (Req 6.2, 6.3, 6.5)
-  // ---------------------------------------------------------------------------
+  // Layer Fetching and Selection
   var layerListEl = document.getElementById('layer-list');
 
   function fetchLayers() {
@@ -284,9 +270,7 @@
     }
   }
 
-  // ---------------------------------------------------------------------------
-  // Leaflet.draw Rectangle Control (Req 8.1, 8.2, 8.3, 8.4, 8.5)
-  // ---------------------------------------------------------------------------
+  // Leaflet.draw Rectangle Control
   var drawnItems = new L.FeatureGroup();
   map.addLayer(drawnItems);
 
@@ -365,9 +349,7 @@
     queryResultsLayer.addTo(map);
   }
 
-  // ---------------------------------------------------------------------------
-  // Layer List Refresh (Req 4.1, 4.2, 4.3, 4.4, 4.5)
-  // ---------------------------------------------------------------------------
+  // Layer List Refresh
   function refreshLayerList() {
     fetch(API_BASE + '/api/layers')
       .then(function (response) {
@@ -389,9 +371,7 @@
       });
   }
 
-  // ---------------------------------------------------------------------------
-  // GTFS Upload Logic (Req 1.3, 1.4, 1.5, 1.7, 1.8, 1.9, 5.1–5.6, 6.1, 6.2)
-  // ---------------------------------------------------------------------------
+  // GTFS Upload Logic
   var fileInput = document.getElementById('gtfs-file-input');
   var submitBtn = document.getElementById('gtfs-submit-btn');
   var statusEl = document.getElementById('gtfs-status');
@@ -457,9 +437,7 @@
     });
   });
 
-  // ---------------------------------------------------------------------------
-  // Initialize on Load (Req 6.2)
-  // ---------------------------------------------------------------------------
+  // Initialize on Load
   fetchLayers();
 
 })();
