@@ -39,25 +39,10 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - name: Install system dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y build-essential cmake g++ lcov ninja-build
-
-      - name: Install Conan
-        run: pip install conan
-
-      - name: Create Conan profile
-        run: conan profile detect
-
-      - name: Install dependencies (Conan)
-        run: conan install . --build=missing -s build_type=Debug
-
-      - name: Configure CMake
-        run: |
-          cmake --preset conan-debug \
-            -DCMAKE_CXX_FLAGS="--coverage" \
-            -DCMAKE_EXE_LINKER_FLAGS="--coverage"
+      - name: Setup C++ (Conan + CMake)
+        uses: ./.github/actions/setup-cpp
+        with:
+          cmake_extra_flags: '-DCMAKE_CXX_FLAGS="--coverage" -DCMAKE_EXE_LINKER_FLAGS="--coverage"'
 
       - name: Build
         run: cmake --build --preset conan-debug --parallel
