@@ -18,9 +18,8 @@
   // ---------------------------------------------------------------------------
   // State
   // ---------------------------------------------------------------------------
-  var currentLayer = null;       // L.GeoJSON layer currently on the map
+  var activeLayers = {};         // { layerName: L.GeoJSON } — multiple layers on the map
   var queryResultsLayer = null;  // L.GeoJSON layer for spatial query results
-  var activeLayerName = null;    // Name of the currently selected layer
 
   // ---------------------------------------------------------------------------
   // Notification System (Req 6.6, 8.5)
@@ -78,8 +77,44 @@
   // ---------------------------------------------------------------------------
   // GeoJSON Rendering Helpers (Req 6.3, 6.4, 7.1, 7.3)
   // ---------------------------------------------------------------------------
-  function createGeoJsonLayer(geojsonData, style) {
-    var layerStyle = style || {
+  var DEFAULT_ROUTE_COLOR = '#2563eb';
+
+  function isStopsLayer(name) {
+    return /stops/i.test(name);
+  }
+
+  function isRoutesLayer(name) {
+    return /routes/i.test(name);
+  }
+
+  function getRouteColor(feature) {
+    var props = feature.properties || {};
+    var raw = props.route_color;
+    if (raw && /^[0-9A-Fa-f]{6}$/.test(raw)) {
+      return '#' + raw;
+    }
+    return DEFAULT_ROUTE_COLOR;
+  }
+
+  function getStopStyle(feature) {
+    var props = feature.properties || {};
+    var isMain = props.stop_type === 'parent_station';
+    var color = isMain ? '#000000' : '#888888';
+    var radius = isMain ? 8 : 5;
+    return {
+      radius: radius,
+      color: color,
+      weight: isMain ? 2 : 1,
+      opacity: 0.9,
+      fillColor: color,
+      fillOpacity: isMain ? 0.7 : 0.4
+    };
+  }
+
+  function createGeoJsonLayer(geojsonData, options) {
+    options = options || {};
+    var layerType = options.layerType || 'generic'; // 'routes', 'stops', or 'generic'
+    var fallbackStyle = options.style || {
       color: '#2563eb',
       weight: 2,
       opacity: 0.8,
@@ -89,17 +124,31 @@
 
     return L.geoJSON(geojsonData, {
       pointToLayer: function (feature, latlng) {
+        if (layerType === 'stops') {
+          var stopStyle = getStopStyle(feature);
+          return L.circleMarker(latlng, stopStyle);
+        }
         return L.circleMarker(latlng, {
           radius: 7,
-          color: layerStyle.color,
-          weight: layerStyle.weight,
-          opacity: layerStyle.opacity,
-          fillColor: layerStyle.fillColor,
-          fillOpacity: layerStyle.fillOpacity
+          color: fallbackStyle.color,
+          weight: fallbackStyle.weight,
+          opacity: fallbackStyle.opacity,
+          fillColor: fallbackStyle.fillColor,
+          fillOpacity: fallbackStyle.fillOpacity
         });
       },
-      style: function () {
-        return layerStyle;
+      style: function (feature) {
+        if (layerType === 'routes') {
+          var routeColor = getRouteColor(feature);
+          return {
+            color: routeColor,
+            weight: 3,
+            opacity: 0.85,
+            fillColor: routeColor,
+            fillOpacity: 0.3
+          };
+        }
+        return fallbackStyle;
       },
       onEachFeature: function (feature, layer) {
         layer.on('click', function (e) {
@@ -145,45 +194,53 @@
     layerListEl.innerHTML = '';
     for (var i = 0; i < layerNames.length; i++) {
       var li = document.createElement('li');
-      li.textContent = layerNames[i];
-      li.setAttribute('tabindex', '0');
-      li.setAttribute('role', 'button');
-      li.setAttribute('aria-pressed', 'false');
-      li.dataset.layerName = layerNames[i];
+      li.className = 'layer-control__item';
 
-      li.addEventListener('click', onLayerItemClick);
-      li.addEventListener('keydown', function (e) {
-        if (e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault();
-          e.target.click();
-        }
-      });
+      var label = document.createElement('label');
+      label.className = 'layer-control__label';
 
+      var checkbox = document.createElement('input');
+      checkbox.type = 'checkbox';
+      checkbox.className = 'layer-control__checkbox';
+      checkbox.dataset.layerName = layerNames[i];
+      checkbox.checked = !!activeLayers[layerNames[i]];
+      checkbox.setAttribute('aria-label', 'Toggle layer ' + layerNames[i]);
+
+      checkbox.addEventListener('change', onLayerToggle);
+
+      var span = document.createElement('span');
+      span.className = 'layer-control__name';
+      span.textContent = layerNames[i];
+
+      label.appendChild(checkbox);
+      label.appendChild(span);
+      li.appendChild(label);
       layerListEl.appendChild(li);
     }
   }
 
-  function onLayerItemClick(e) {
+  function onLayerToggle(e) {
     var name = e.target.dataset.layerName;
-    selectLayer(name);
+    if (e.target.checked) {
+      addLayer(name);
+    } else {
+      removeLayer(name);
+    }
   }
 
-  function selectLayer(name) {
-    // Update active state in UI
-    var items = layerListEl.querySelectorAll('li');
-    for (var i = 0; i < items.length; i++) {
-      if (items[i].dataset.layerName === name) {
-        items[i].classList.add('active');
-        items[i].setAttribute('aria-pressed', 'true');
-      } else {
-        items[i].classList.remove('active');
-        items[i].setAttribute('aria-pressed', 'false');
-      }
-    }
+  // Layer default style for generic layers without data-driven color
+  var DEFAULT_LAYER_STYLE = {
+    color: '#2563eb',
+    weight: 2,
+    opacity: 0.8,
+    fillColor: '#2563eb',
+    fillOpacity: 0.3
+  };
 
-    activeLayerName = name;
+  function addLayer(name) {
+    // Already loaded
+    if (activeLayers[name]) return;
 
-    // Fetch and render layer
     fetch(API_BASE + '/api/layers/' + encodeURIComponent(name))
       .then(function (response) {
         if (!response.ok) {
@@ -192,27 +249,38 @@
         return response.json();
       })
       .then(function (geojsonData) {
-        renderLayer(geojsonData);
+        var layerType = 'generic';
+        if (isStopsLayer(name)) {
+          layerType = 'stops';
+        } else if (isRoutesLayer(name)) {
+          layerType = 'routes';
+        }
+
+        var layer = createGeoJsonLayer(geojsonData, {
+          layerType: layerType,
+          style: DEFAULT_LAYER_STYLE
+        });
+        layer.addTo(map);
+        activeLayers[name] = layer;
+
+        // Fit bounds (Req 6.5)
+        var bounds = layer.getBounds();
+        if (bounds.isValid()) {
+          map.fitBounds(bounds, { padding: [30, 30] });
+        }
       })
       .catch(function (err) {
         showNotification('Error loading layer: ' + err.message, 'error');
+        // Uncheck the checkbox on failure
+        var cb = layerListEl.querySelector('input[data-layer-name="' + name + '"]');
+        if (cb) cb.checked = false;
       });
   }
 
-  function renderLayer(geojsonData) {
-    // Remove previous layer
-    if (currentLayer) {
-      map.removeLayer(currentLayer);
-      currentLayer = null;
-    }
-
-    currentLayer = createGeoJsonLayer(geojsonData);
-    currentLayer.addTo(map);
-
-    // Fit bounds (Req 6.5)
-    var bounds = currentLayer.getBounds();
-    if (bounds.isValid()) {
-      map.fitBounds(bounds, { padding: [30, 30] });
+  function removeLayer(name) {
+    if (activeLayers[name]) {
+      map.removeLayer(activeLayers[name]);
+      delete activeLayers[name];
     }
   }
 
@@ -293,12 +361,12 @@
       fillOpacity: 0.4
     };
 
-    queryResultsLayer = createGeoJsonLayer(geojsonData, queryStyle);
+    queryResultsLayer = createGeoJsonLayer(geojsonData, { style: queryStyle });
     queryResultsLayer.addTo(map);
   }
 
   // ---------------------------------------------------------------------------
-  // Layer List Refresh and Highlight (Req 4.1, 4.2, 4.3, 4.4, 4.5)
+  // Layer List Refresh (Req 4.1, 4.2, 4.3, 4.4, 4.5)
   // ---------------------------------------------------------------------------
   function refreshLayerList() {
     fetch(API_BASE + '/api/layers')
@@ -307,32 +375,18 @@
         return response.json();
       })
       .then(function (layerNames) {
-        var previousActive = activeLayerName;
-        populateLayerList(layerNames);
-        if (previousActive && layerNames.indexOf(previousActive) !== -1) {
-          highlightLayer(previousActive);
-        } else if (previousActive) {
-          if (currentLayer) { map.removeLayer(currentLayer); currentLayer = null; }
-          activeLayerName = null;
+        // Remove layers that no longer exist on the server
+        var activeNames = Object.keys(activeLayers);
+        for (var i = 0; i < activeNames.length; i++) {
+          if (layerNames.indexOf(activeNames[i]) === -1) {
+            removeLayer(activeNames[i]);
+          }
         }
+        populateLayerList(layerNames);
       })
       .catch(function (err) {
         showNotification('Could not refresh layer list', 'error');
       });
-  }
-
-  function highlightLayer(name) {
-    var items = layerListEl.querySelectorAll('li');
-    for (var i = 0; i < items.length; i++) {
-      if (items[i].dataset.layerName === name) {
-        items[i].classList.add('active');
-        items[i].setAttribute('aria-pressed', 'true');
-      } else {
-        items[i].classList.remove('active');
-        items[i].setAttribute('aria-pressed', 'false');
-      }
-    }
-    activeLayerName = name;
   }
 
   // ---------------------------------------------------------------------------
