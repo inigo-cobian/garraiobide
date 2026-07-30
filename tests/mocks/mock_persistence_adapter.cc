@@ -4,6 +4,7 @@ namespace garraiobide::adapters::persistence {
 
 std::expected<void, core::ports::PersistenceError>
 MockPersistenceAdapter::save_layer(const core::domain::Layer& layer) {
+    std::lock_guard<std::mutex> lock(mutex_);
     auto [_, inserted] = store_.try_emplace(layer.name, layer);
     if (!inserted) {
         return std::unexpected(core::ports::PersistenceError::DuplicateLayer);
@@ -13,6 +14,7 @@ MockPersistenceAdapter::save_layer(const core::domain::Layer& layer) {
 
 std::expected<core::domain::Layer, core::ports::PersistenceError>
 MockPersistenceAdapter::find_layer(const std::string& name) {
+    std::lock_guard<std::mutex> lock(mutex_);
     auto it = store_.find(name);
     if (it == store_.end()) {
         return std::unexpected(core::ports::PersistenceError::NotFound);
@@ -22,6 +24,7 @@ MockPersistenceAdapter::find_layer(const std::string& name) {
 
 std::expected<std::vector<std::string>, core::ports::PersistenceError>
 MockPersistenceAdapter::list_layers() {
+    std::lock_guard<std::mutex> lock(mutex_);
     std::vector<std::string> names;
     names.reserve(store_.size());
     for (const auto& [name, _] : store_) {
@@ -32,6 +35,7 @@ MockPersistenceAdapter::list_layers() {
 
 std::expected<void, core::ports::PersistenceError>
 MockPersistenceAdapter::remove_layer(const std::string& name) {
+    std::lock_guard<std::mutex> lock(mutex_);
     auto it = store_.find(name);
     if (it == store_.end()) {
         return std::unexpected(core::ports::PersistenceError::NotFound);
@@ -42,6 +46,7 @@ MockPersistenceAdapter::remove_layer(const std::string& name) {
 
 std::expected<std::vector<core::domain::GeoFeature>, core::ports::PersistenceError>
 MockPersistenceAdapter::query_features(const core::domain::BoundingBox& extent) {
+    std::lock_guard<std::mutex> lock(mutex_);
     std::vector<core::domain::GeoFeature> result;
     for (const auto& [_, layer] : store_) {
         for (const auto& feature : layer.features) {

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <expected>
+#include <mutex>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -12,6 +13,7 @@ namespace garraiobide::adapters::persistence {
 
 /// In-memory mock persistence adapter.
 /// Stores layers in a hash map — suitable for testing without a real database.
+/// Thread-safe: operations are guarded by a mutex for multi-threaded test use.
 class MockPersistenceAdapter final : public core::ports::PersistencePort {
    public:
     [[nodiscard]] std::expected<void, core::ports::PersistenceError>
@@ -31,9 +33,13 @@ class MockPersistenceAdapter final : public core::ports::PersistencePort {
     query_features(const core::domain::BoundingBox& extent) override;
 
     /// Direct access to storage for test assertions.
-    [[nodiscard]] std::size_t layer_count() const { return store_.size(); }
+    [[nodiscard]] std::size_t layer_count() const {
+        std::lock_guard<std::mutex> lock(mutex_);
+        return store_.size();
+    }
 
    private:
+    mutable std::mutex mutex_;
     std::unordered_map<std::string, core::domain::Layer> store_;
 };
 
