@@ -87,6 +87,10 @@ vcpkg_installed/
 Testing/
 .cache/
 
+# Coverage reports
+coverage/
+*.info
+
 # Bazel
 /bazel-*
 /.ijwb/
