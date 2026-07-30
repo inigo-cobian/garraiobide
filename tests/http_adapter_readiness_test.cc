@@ -5,7 +5,6 @@
 /// With the polling loop fix (Task 3.2), this test should now PASS.
 
 #include <chrono>
-#include <string>
 #include <thread>
 
 #include <gtest/gtest.h>
