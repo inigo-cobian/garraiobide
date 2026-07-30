@@ -23,6 +23,7 @@ add_executable(garraiobide_tests
         mongo_persistence_property_test.cc
         parse_args_test.cc
         mocks/mock_ingestion_adapter.cc
+        mocks/mock_persistence_adapter.cc
 )
 
 target_include_directories(garraiobide_tests PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})

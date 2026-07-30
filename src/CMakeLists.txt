@@ -5,7 +5,6 @@ add_library(garraiobide_src
         adapters/ingestion/gtfs/gtfs_parser.cc
         adapters/ingestion/gtfs/gtfs_ingestion_adapter.cc
         adapters/persistence/file_persistence_adapter.cc
-        adapters/persistence/mock_persistence_adapter.cc
         adapters/persistence/mongo_persistence_adapter.cc
         adapters/ui/mock_presentation_adapter.cc
         app/layer_service.cc
