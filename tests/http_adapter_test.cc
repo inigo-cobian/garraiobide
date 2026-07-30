@@ -12,7 +12,7 @@
 #include "../src/core/domain/geo_feature.h"
 #include "../src/core/domain/geometry.h"
 #include "../src/core/domain/layer.h"
-#include "adapters/persistence/mock_persistence_adapter.h"
+#include "mocks/mock_persistence_adapter.h"
 #include "mocks/mock_ingestion_adapter.h"
 
 namespace garraiobide::tests {
