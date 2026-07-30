@@ -308,5 +308,206 @@ TEST_F(HttpAdapterTest, ErrorResponseHasCorsAndContentType) {
                 std::string::npos);
 }
 
+// ---------- POST /api/ingest/gtfs ----------
+
+TEST_F(HttpAdapterTest, IngestGtfsSuccessReturnsLayerNames) {
+    // Configure the mock ingestion adapter to return a stop and a route.
+    std::vector<core::domain::GeoFeature> features;
+    {
+        GeoFeature stop;
+        stop.id = "stop_1";
+        stop.geometry = Point{{.latitude = 43.26, .longitude = -2.93}};
+        stop.properties = {{"name", std::string("Abando")}};
+        features.push_back(stop);
+    }
+    {
+        GeoFeature route;
+        route.id = "route_1";
+        route.geometry = LineString{{
+            {.latitude = 43.26, .longitude = -2.93},
+            {.latitude = 43.27, .longitude = -2.94},
+        }};
+        route.properties = {{"name", std::string("L1")}};
+        features.push_back(route);
+    }
+    ingestion_.set_features(std::move(features));
+
+    httplib::Client client(kTestHost, port_);
+    httplib::UploadFormDataItems items = {
+        {"file", "fake zip content", "bilbao_transit.zip", "application/zip"},
+    };
+    auto res = client.Post("/api/ingest/gtfs", items);
+
+    ASSERT_NE(res, nullptr);
+    EXPECT_EQ(res->status, 200);
+
+    auto body = json::parse(res->body);
+    EXPECT_EQ(body["status"], "ok");
+    ASSERT_TRUE(body.contains("layers"));
+    ASSERT_TRUE(body["layers"].is_array());
+    EXPECT_EQ(body["layers"].size(), 2u);
+
+    // Layer names should be derived from the filename.
+    auto layer_names = body["layers"].get<std::vector<std::string>>();
+    EXPECT_TRUE(std::find(layer_names.begin(), layer_names.end(),
+                          "bilbao_transit_routes") != layer_names.end());
+    EXPECT_TRUE(std::find(layer_names.begin(), layer_names.end(),
+                          "bilbao_transit_stops") != layer_names.end());
+}
+
+TEST_F(HttpAdapterTest, IngestGtfsNoFileReturns400) {
+    httplib::Client client(kTestHost, port_);
+    // Post with no file field at all.
+    httplib::UploadFormDataItems items = {
+        {"not_file", "data", "something.txt", "text/plain"},
+    };
+    auto res = client.Post("/api/ingest/gtfs", items);
+
+    ASSERT_NE(res, nullptr);
+    EXPECT_EQ(res->status, 400);
+
+    auto body = json::parse(res->body);
+    ASSERT_TRUE(body.contains("error"));
+    auto err_msg = body["error"].get<std::string>();
+    EXPECT_NE(err_msg.find("No file"), std::string::npos);
+}
+
+TEST_F(HttpAdapterTest, IngestGtfsEmptyFileReturns400) {
+    httplib::Client client(kTestHost, port_);
+    httplib::UploadFormDataItems items = {
+        {"file", "", "empty.zip", "application/zip"},
+    };
+    auto res = client.Post("/api/ingest/gtfs", items);
+
+    ASSERT_NE(res, nullptr);
+    EXPECT_EQ(res->status, 400);
+
+    auto body = json::parse(res->body);
+    ASSERT_TRUE(body.contains("error"));
+    auto err_msg = body["error"].get<std::string>();
+    EXPECT_NE(err_msg.find("empty"), std::string::npos);
+}
+
+TEST_F(HttpAdapterTest, IngestGtfsIngestionFailureReturns422) {
+    // Configure mock to fail ingestion.
+    ingestion_.set_error(core::ports::IngestionError::ParseError);
+
+    httplib::Client client(kTestHost, port_);
+    httplib::UploadFormDataItems items = {
+        {"file", "fake zip content", "bad_data.zip", "application/zip"},
+    };
+    auto res = client.Post("/api/ingest/gtfs", items);
+
+    ASSERT_NE(res, nullptr);
+    EXPECT_EQ(res->status, 422);
+
+    auto body = json::parse(res->body);
+    ASSERT_TRUE(body.contains("error"));
+    auto err_msg = body["error"].get<std::string>();
+    EXPECT_NE(err_msg.find("ingestion failed"), std::string::npos);
+}
+
+TEST_F(HttpAdapterTest, IngestGtfsDuplicateLayerReturns409) {
+    // Set up features so ingestion succeeds.
+    std::vector<core::domain::GeoFeature> features;
+    GeoFeature stop;
+    stop.id = "s1";
+    stop.geometry = Point{{.latitude = 43.0, .longitude = -2.0}};
+    features.push_back(stop);
+    ingestion_.set_features(features);
+
+    // Pre-seed a layer that will collide with the derived name.
+    Layer routes_layer;
+    routes_layer.name = "duptest_routes";
+    routes_layer.scale = SpatialScale::Urban;
+    (void)persistence_.save_layer(routes_layer);
+
+    httplib::Client client(kTestHost, port_);
+    httplib::UploadFormDataItems items = {
+        {"file", "content", "duptest.zip", "application/zip"},
+    };
+    auto res = client.Post("/api/ingest/gtfs", items);
+
+    ASSERT_NE(res, nullptr);
+    EXPECT_EQ(res->status, 409);
+
+    auto body = json::parse(res->body);
+    ASSERT_TRUE(body.contains("error"));
+    auto err_msg = body["error"].get<std::string>();
+    EXPECT_NE(err_msg.find("already exists"), std::string::npos);
+}
+
+TEST_F(HttpAdapterTest, IngestGtfsResponseHasCorsHeader) {
+    ingestion_.set_features({});
+
+    httplib::Client client(kTestHost, port_);
+    httplib::UploadFormDataItems items = {
+        {"file", "content", "test.zip", "application/zip"},
+    };
+    auto res = client.Post("/api/ingest/gtfs", items);
+
+    ASSERT_NE(res, nullptr);
+    EXPECT_TRUE(res->has_header("Access-Control-Allow-Origin"));
+    EXPECT_EQ(res->get_header_value("Access-Control-Allow-Origin"), "*");
+}
+
+// ---------- OPTIONS /api/ingest/gtfs (CORS preflight) ----------
+
+TEST_F(HttpAdapterTest, IngestGtfsOptionsReturns204) {
+    httplib::Client client(kTestHost, port_);
+    auto res = client.Options("/api/ingest/gtfs");
+
+    ASSERT_NE(res, nullptr);
+    EXPECT_EQ(res->status, 204);
+}
+
+TEST_F(HttpAdapterTest, IngestGtfsOptionsHasCorsHeaders) {
+    httplib::Client client(kTestHost, port_);
+    auto res = client.Options("/api/ingest/gtfs");
+
+    ASSERT_NE(res, nullptr);
+    EXPECT_TRUE(res->has_header("Access-Control-Allow-Origin"));
+    EXPECT_EQ(res->get_header_value("Access-Control-Allow-Origin"), "*");
+    EXPECT_TRUE(res->has_header("Access-Control-Allow-Methods"));
+    EXPECT_TRUE(res->has_header("Access-Control-Allow-Headers"));
+}
+
+// ---------- Method Not Allowed on /api/ingest/gtfs ----------
+
+TEST_F(HttpAdapterTest, IngestGtfsPutReturns405) {
+    httplib::Client client(kTestHost, port_);
+    auto res = client.Put("/api/ingest/gtfs", "", "application/json");
+
+    ASSERT_NE(res, nullptr);
+    EXPECT_EQ(res->status, 405);
+
+    auto body = json::parse(res->body);
+    ASSERT_TRUE(body.contains("error"));
+    auto err_msg = body["error"].get<std::string>();
+    EXPECT_NE(err_msg.find("not allowed"), std::string::npos);
+}
+
+TEST_F(HttpAdapterTest, IngestGtfsDeleteReturns405) {
+    httplib::Client client(kTestHost, port_);
+    auto res = client.Delete("/api/ingest/gtfs");
+
+    ASSERT_NE(res, nullptr);
+    EXPECT_EQ(res->status, 405);
+
+    auto body = json::parse(res->body);
+    ASSERT_TRUE(body.contains("error"));
+}
+
+TEST_F(HttpAdapterTest, IngestGtfsPatchReturns405) {
+    httplib::Client client(kTestHost, port_);
+    auto res = client.Patch("/api/ingest/gtfs", "", "application/json");
+
+    ASSERT_NE(res, nullptr);
+    EXPECT_EQ(res->status, 405);
+
+    auto body = json::parse(res->body);
+    ASSERT_TRUE(body.contains("error"));
+}
+
 }  // namespace
 }  // namespace garraiobide::tests
