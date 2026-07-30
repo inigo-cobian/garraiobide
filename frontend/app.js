@@ -15,6 +15,9 @@
 
   // State
   var activeLayers = {};         // { layerName: L.GeoJSON } — multiple layers on the map
+  var secondaryStopsLayers = {}; // { layerName: L.LayerGroup } — child stops + connector lines
+  var stopsGeoJsonCache = {};    // { layerName: raw GeoJSON } — cached for toggling secondary
+  var showSecondary = {};        // { layerName: bool }
   var queryResultsLayer = null;  // L.GeoJSON layer for spatial query results
 
   // Notification System
@@ -119,6 +122,15 @@
           var props = (layer.feature && layer.feature.properties) || {};
           var isMain = props.stop_type === 'parent_station';
           layer.setRadius(getStopRadius(zoom, isMain));
+        }
+      });
+    }
+    // Also resize secondary stop markers
+    var secNames = Object.keys(secondaryStopsLayers);
+    for (var i = 0; i < secNames.length; i++) {
+      secondaryStopsLayers[secNames[i]].eachLayer(function (layer) {
+        if (layer.setRadius) {
+          layer.setRadius(getStopRadius(zoom, false));
         }
       });
     }
@@ -229,7 +241,43 @@
       label.appendChild(checkbox);
       label.appendChild(span);
       li.appendChild(label);
+
+      // Add secondary stops toggle for stops layers
+      if (isStopsLayer(layerNames[i])) {
+        var subLabel = document.createElement('label');
+        subLabel.className = 'layer-control__label layer-control__label--sub';
+
+        var subCheckbox = document.createElement('input');
+        subCheckbox.type = 'checkbox';
+        subCheckbox.className = 'layer-control__checkbox';
+        subCheckbox.dataset.secondaryFor = layerNames[i];
+        subCheckbox.checked = !!showSecondary[layerNames[i]];
+        subCheckbox.setAttribute('aria-label', 'Show secondary stops for ' + layerNames[i]);
+        subCheckbox.addEventListener('change', onSecondaryToggle);
+
+        var subSpan = document.createElement('span');
+        subSpan.className = 'layer-control__name layer-control__name--sub';
+        subSpan.textContent = 'Secondary stops';
+
+        subLabel.appendChild(subCheckbox);
+        subLabel.appendChild(subSpan);
+        li.appendChild(subLabel);
+      }
+
       layerListEl.appendChild(li);
+    }
+  }
+
+  function onSecondaryToggle(e) {
+    var name = e.target.dataset.secondaryFor;
+    if (e.target.checked) {
+      showSecondary[name] = true;
+      if (stopsGeoJsonCache[name]) {
+        buildSecondaryStopsLayer(name);
+      }
+    } else {
+      showSecondary[name] = false;
+      removeSecondaryStopsLayer(name);
     }
   }
 
@@ -270,25 +318,120 @@
           layerType = 'routes';
         }
 
-        var layer = createGeoJsonLayer(geojsonData, {
-          layerType: layerType,
-          style: DEFAULT_LAYER_STYLE
-        });
-        layer.addTo(map);
-        activeLayers[name] = layer;
+        var layer;
+        if (layerType === 'stops') {
+          // Cache full data, show only parent stations initially
+          stopsGeoJsonCache[name] = geojsonData;
+          var mainOnly = {
+            type: 'FeatureCollection',
+            features: geojsonData.features.filter(function (f) {
+              return f.properties && f.properties.stop_type === 'parent_station';
+            })
+          };
+          layer = createGeoJsonLayer(mainOnly, {
+            layerType: 'stops',
+            style: DEFAULT_LAYER_STYLE
+          });
+          layer.addTo(map);
+          activeLayers[name] = layer;
 
-        // Fit bounds (Req 6.5)
-        var bounds = layer.getBounds();
+          // If secondary was already toggled on, rebuild it
+          if (showSecondary[name]) {
+            buildSecondaryStopsLayer(name);
+          }
+        } else {
+          layer = createGeoJsonLayer(geojsonData, {
+            layerType: layerType,
+            style: DEFAULT_LAYER_STYLE
+          });
+          layer.addTo(map);
+          activeLayers[name] = layer;
+        }
+
+        // Fit bounds
+        var bounds = activeLayers[name].getBounds();
         if (bounds.isValid()) {
           map.fitBounds(bounds, { padding: [30, 30] });
         }
       })
       .catch(function (err) {
         showNotification('Error loading layer: ' + err.message, 'error');
-        // Uncheck the checkbox on failure
         var cb = layerListEl.querySelector('input[data-layer-name="' + name + '"]');
         if (cb) cb.checked = false;
       });
+  }
+
+  function buildSecondaryStopsLayer(name) {
+    var geojsonData = stopsGeoJsonCache[name];
+    if (!geojsonData) return;
+
+    // Remove existing secondary layer
+    if (secondaryStopsLayers[name]) {
+      map.removeLayer(secondaryStopsLayers[name]);
+      delete secondaryStopsLayers[name];
+    }
+
+    // Index parent stations by id
+    var parentIndex = {};
+    for (var i = 0; i < geojsonData.features.length; i++) {
+      var f = geojsonData.features[i];
+      if (f.properties && f.properties.stop_type === 'parent_station') {
+        parentIndex[f.id] = f.geometry.coordinates; // [lng, lat]
+      }
+    }
+
+    var group = L.layerGroup();
+    var zoom = map.getZoom();
+
+    for (var i = 0; i < geojsonData.features.length; i++) {
+      var f = geojsonData.features[i];
+      if (!f.properties || f.properties.stop_type !== 'child_stop') continue;
+
+      var childCoords = f.geometry.coordinates; // [lng, lat]
+      var parentId = f.properties.parent_station;
+      var parentCoords = parentIndex[parentId];
+      var childLatLng = L.latLng(childCoords[1], childCoords[0]);
+
+      // Skip child entirely if within 20m of parent — avoids overlapping markers
+      if (parentCoords) {
+        var parentLatLng = L.latLng(parentCoords[1], parentCoords[0]);
+        if (parentLatLng.distanceTo(childLatLng) < 20) continue;
+      }
+
+      // Draw the child stop marker
+      var style = getStopStyle(f, zoom);
+      var marker = L.circleMarker(childLatLng, style);
+      marker.feature = f;
+      marker.on('click', function (e) {
+        L.DomEvent.stopPropagation(e);
+        L.popup()
+          .setLatLng(e.latlng)
+          .setContent(buildPopupContent(this.feature))
+          .openOn(map);
+      });
+      group.addLayer(marker);
+
+      // Draw dashed connector line to parent
+      if (parentCoords) {
+        var line = L.polyline([childLatLng, parentLatLng], {
+          color: '#888888',
+          weight: 1,
+          opacity: 0.6,
+          dashArray: '4 4'
+        });
+        group.addLayer(line);
+      }
+    }
+
+    group.addTo(map);
+    secondaryStopsLayers[name] = group;
+  }
+
+  function removeSecondaryStopsLayer(name) {
+    if (secondaryStopsLayers[name]) {
+      map.removeLayer(secondaryStopsLayers[name]);
+      delete secondaryStopsLayers[name];
+    }
   }
 
   function removeLayer(name) {
@@ -296,6 +439,8 @@
       map.removeLayer(activeLayers[name]);
       delete activeLayers[name];
     }
+    removeSecondaryStopsLayer(name);
+    delete stopsGeoJsonCache[name];
   }
 
   // Leaflet.draw Rectangle Control

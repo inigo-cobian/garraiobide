@@ -92,6 +92,16 @@ body {
   user-select: none;
 }
 
+.layer-control__label--sub {
+  padding-left: 24px;
+  font-size: 12px;
+}
+
+.layer-control__name--sub {
+  color: #666;
+  font-style: italic;
+}
+
 /* Notifications - fixed top-right, below layer control */
 .notifications {
   position: fixed;
