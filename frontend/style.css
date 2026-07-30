@@ -54,29 +54,42 @@ body {
   padding: 0;
 }
 
-.layer-control__list li {
-  padding: 6px 8px;
+.layer-control__item {
   margin: 2px 0;
   border-radius: 4px;
-  cursor: pointer;
-  font-size: 13px;
-  color: #333;
   transition: background-color 0.15s ease;
 }
 
-.layer-control__list li:hover {
+.layer-control__item:hover {
   background-color: #f0f4ff;
 }
 
-.layer-control__list li:focus {
-  outline: 2px solid #2563eb;
-  outline-offset: -2px;
+.layer-control__label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  cursor: pointer;
+  font-size: 13px;
+  color: #333;
+  border-radius: 4px;
 }
 
-.layer-control__list li.active {
-  background-color: #2563eb;
-  color: #fff;
-  font-weight: 500;
+.layer-control__checkbox {
+  width: 16px;
+  height: 16px;
+  accent-color: #2563eb;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.layer-control__checkbox:focus {
+  outline: 2px solid #2563eb;
+  outline-offset: 2px;
+}
+
+.layer-control__name {
+  user-select: none;
 }
 
 /* Notifications - fixed top-right, below layer control */
