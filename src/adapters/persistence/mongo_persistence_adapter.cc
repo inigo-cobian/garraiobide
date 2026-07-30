@@ -31,6 +31,7 @@ using core::domain::GeoFeature;
 using core::domain::Geometry;
 using core::domain::Layer;
 using core::domain::LineString;
+using core::domain::MultiLineString;
 using core::domain::Point;
 using core::domain::Polygon;
 using core::domain::Properties;
@@ -92,6 +93,18 @@ bsoncxx::document::value geometry_to_bson(const Geometry& geom) {
                 return make_document(
                     kvp("type", "LineString"),
                     kvp("coordinates", coords.extract()));
+            } else if constexpr (std::is_same_v<T, MultiLineString>) {
+                array lines_arr;
+                for (const auto& line : g.lines) {
+                    array line_arr;
+                    for (const auto& v : line) {
+                        line_arr.append(make_array(v.longitude, v.latitude));
+                    }
+                    lines_arr.append(line_arr.extract());
+                }
+                return make_document(
+                    kvp("type", "MultiLineString"),
+                    kvp("coordinates", lines_arr.extract()));
             } else if constexpr (std::is_same_v<T, Polygon>) {
                 array rings_arr;
                 for (const auto& ring : g.rings) {
@@ -176,6 +189,18 @@ Geometry bson_to_geometry(bsoncxx::document::view doc) {
             vertices.push_back(bson_to_coordinate(coord.get_array().value));
         }
         return LineString{.vertices = std::move(vertices)};
+    }
+
+    if (type == "MultiLineString") {
+        std::vector<std::vector<Coordinate>> lines;
+        for (const auto& line : coordinates.get_array().value) {
+            std::vector<Coordinate> line_coords;
+            for (const auto& coord : line.get_array().value) {
+                line_coords.push_back(bson_to_coordinate(coord.get_array().value));
+            }
+            lines.push_back(std::move(line_coords));
+        }
+        return MultiLineString{.lines = std::move(lines)};
     }
 
     // Polygon

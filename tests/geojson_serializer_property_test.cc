@@ -54,6 +54,18 @@ class GeoJsonPropertyTest : public ::testing::Test {
         return LineString{std::move(vertices)};
     }
 
+    MultiLineString random_multilinestring() {
+        std::uniform_int_distribution<int> line_count_dist(2, 5);
+        int num_lines = line_count_dist(rng_);
+        std::vector<std::vector<Coordinate>> lines;
+        lines.reserve(num_lines);
+        for (int i = 0; i < num_lines; ++i) {
+            auto ls = random_linestring();
+            lines.push_back(std::move(ls.vertices));
+        }
+        return MultiLineString{std::move(lines)};
+    }
+
     Polygon random_polygon() {
         // Generate a single outer ring with 4-8 vertices (closed ring).
         std::uniform_int_distribution<int> size_dist(4, 8);
@@ -68,12 +80,14 @@ class GeoJsonPropertyTest : public ::testing::Test {
     }
 
     Geometry random_geometry() {
-        std::uniform_int_distribution<int> dist(0, 2);
+        std::uniform_int_distribution<int> dist(0, 3);
         switch (dist(rng_)) {
             case 0:
                 return random_point();
             case 1:
                 return random_linestring();
+            case 2:
+                return random_multilinestring();
             default:
                 return random_polygon();
         }
@@ -225,6 +239,38 @@ TEST_F(GeoJsonPropertyTest,
                 EXPECT_DOUBLE_EQ(rings[r][v][1].get<double>(),
                                  poly.rings[r][v].latitude)
                     << "Trial " << i << ", ring " << r << ", vertex " << v;
+            }
+        }
+    }
+}
+
+TEST_F(GeoJsonPropertyTest,
+       MultiLineStringSerializationProducesCorrectTypeAndSwappedCoordinates) {
+    constexpr int kTrials = 100;
+
+    for (int i = 0; i < kTrials; ++i) {
+        MultiLineString mls = random_multilinestring();
+        GeoFeature feature = random_feature_with_geometry(mls);
+
+        std::string output = GeoJsonSerializer::serialize_feature(feature);
+        json j = json::parse(output);
+
+        // (a) Geometry type matches
+        ASSERT_EQ(j["geometry"]["type"], "MultiLineString")
+            << "Trial " << i << ": Expected geometry type 'MultiLineString'";
+
+        // (b) Coordinate swap for every vertex in every line
+        auto lines = j["geometry"]["coordinates"];
+        ASSERT_EQ(lines.size(), mls.lines.size());
+        for (size_t l = 0; l < mls.lines.size(); ++l) {
+            ASSERT_EQ(lines[l].size(), mls.lines[l].size());
+            for (size_t v = 0; v < mls.lines[l].size(); ++v) {
+                EXPECT_DOUBLE_EQ(lines[l][v][0].get<double>(),
+                                 mls.lines[l][v].longitude)
+                    << "Trial " << i << ", line " << l << ", vertex " << v;
+                EXPECT_DOUBLE_EQ(lines[l][v][1].get<double>(),
+                                 mls.lines[l][v].latitude)
+                    << "Trial " << i << ", line " << l << ", vertex " << v;
             }
         }
     }

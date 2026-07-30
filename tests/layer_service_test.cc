@@ -226,6 +226,27 @@ TEST_F(LayerServiceTest, ImportGtfsPartitionsFeaturesByGeometryType) {
     EXPECT_EQ(persistence_.layer_count(), 2u);
 }
 
+TEST_F(LayerServiceTest, ImportGtfsMultiLineStringGoesToRoutesLayer) {
+    // A route built from multiple GTFS shapes (e.g. Metro Bilbao) produces a
+    // MultiLineString — it must land in the routes layer, not be dropped.
+    ingestion_.set_features({
+        GeoFeature{
+            .id = "route_1",
+            .geometry = MultiLineString{{{{43.26, -2.93}, {43.27, -2.94}},
+                                          {{43.28, -2.95}, {43.29, -2.96}}}},
+            .properties = {},
+        },
+    });
+
+    auto result = service_->import_gtfs("/tmp/bilbao.zip", "bilbao");
+
+    ASSERT_TRUE(result.has_value());
+    auto routes = persistence_.find_layer("bilbao_routes");
+    ASSERT_TRUE(routes.has_value());
+    ASSERT_EQ(routes->features.size(), 1u);
+    EXPECT_TRUE(std::holds_alternative<MultiLineString>(routes->features[0].geometry));
+}
+
 TEST_F(LayerServiceTest, ImportGtfsSuccess_SetsUrbanScale) {
     ingestion_.set_features({
         GeoFeature{
