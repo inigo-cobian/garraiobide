@@ -16,6 +16,7 @@
   // State
   var activeLayers = {};         // { layerName: L.GeoJSON } — multiple layers on the map
   var secondaryStopsLayers = {}; // { layerName: L.LayerGroup } — child stops + connector lines
+  var connectorLineLayers = {};  // { layerName: L.LayerGroup } — dashed lines only
   var stopsGeoJsonCache = {};    // { layerName: raw GeoJSON } — cached for toggling secondary
   var showSecondary = {};        // { layerName: bool }
   var queryResultsLayer = null;  // L.GeoJSON layer for spatial query results
@@ -136,7 +137,23 @@
     }
   }
 
-  map.on('zoomend', updateStopRadii);
+  map.on('zoomend', function () {
+    updateStopRadii();
+    updateConnectorVisibility();
+  });
+
+  function updateConnectorVisibility() {
+    var zoom = map.getZoom();
+    var names = Object.keys(connectorLineLayers);
+    for (var i = 0; i < names.length; i++) {
+      var lg = connectorLineLayers[names[i]];
+      if (zoom >= 15) {
+        if (!map.hasLayer(lg)) lg.addTo(map);
+      } else {
+        if (map.hasLayer(lg)) map.removeLayer(lg);
+      }
+    }
+  }
 
   function createGeoJsonLayer(geojsonData, options) {
     options = options || {};
@@ -381,6 +398,7 @@
     }
 
     var group = L.layerGroup();
+    var lines = L.layerGroup();
     var zoom = map.getZoom();
 
     for (var i = 0; i < geojsonData.features.length; i++) {
@@ -414,23 +432,33 @@
       // Draw dashed connector line to parent
       if (parentCoords) {
         var line = L.polyline([childLatLng, parentLatLng], {
-          color: '#888888',
-          weight: 1,
-          opacity: 0.6,
+          color: '#000',
+          weight: 2,
+          opacity: 0.9,
           dashArray: '4 4'
         });
-        group.addLayer(line);
+        lines.addLayer(line);
       }
     }
 
     group.addTo(map);
     secondaryStopsLayers[name] = group;
+
+    // Lines shown only at zoom >= 15
+    connectorLineLayers[name] = lines;
+    if (map.getZoom() >= 15) {
+      lines.addTo(map);
+    }
   }
 
   function removeSecondaryStopsLayer(name) {
     if (secondaryStopsLayers[name]) {
       map.removeLayer(secondaryStopsLayers[name]);
       delete secondaryStopsLayers[name];
+    }
+    if (connectorLineLayers[name]) {
+      map.removeLayer(connectorLineLayers[name]);
+      delete connectorLineLayers[name];
     }
   }
 
