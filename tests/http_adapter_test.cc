@@ -1,3 +1,4 @@
+#include <atomic>
 #include <chrono>
 #include <string>
 #include <thread>
@@ -22,7 +23,6 @@ using namespace garraiobide::core::domain;
 using namespace garraiobide::adapters;
 using json = nlohmann::json;
 
-constexpr std::uint16_t kTestPort = 18080;
 constexpr const char* kTestHost = "localhost";
 
 /// Test fixture that sets up the HTTP adapter with mock dependencies.
@@ -33,12 +33,12 @@ class HttpAdapterTest : public ::testing::Test {
             ingestion_, persistence_, presentation_);
         adapter_ = std::make_unique<adapters::http::HttpAdapter>(*service_);
 
-        // Start server in background thread.
+        // Start server in background thread with OS-assigned port.
         server_thread_ = std::thread([this]() {
-            adapter_->listen(kTestPort);
+            adapter_->listen_on_any_port();
         });
 
-        // Poll until server is accepting connections (replaces fixed 100ms sleep).
+        // Poll until server is accepting connections.
         constexpr auto kPollInterval = std::chrono::milliseconds(5);
         constexpr auto kTimeout = std::chrono::seconds(5);
         auto start = std::chrono::steady_clock::now();
@@ -48,6 +48,8 @@ class HttpAdapterTest : public ::testing::Test {
             }
             std::this_thread::sleep_for(kPollInterval);
         }
+
+        port_ = adapter_->assigned_port();
     }
 
     void TearDown() override {
@@ -88,6 +90,7 @@ class HttpAdapterTest : public ::testing::Test {
     std::unique_ptr<app::LayerService> service_;
     std::unique_ptr<adapters::http::HttpAdapter> adapter_;
     std::thread server_thread_;
+    int port_ = 0;
 };
 
 // ---------- GET /api/layers ----------
@@ -96,7 +99,7 @@ TEST_F(HttpAdapterTest, ListLayersReturnsJsonArray) {
     seed_layer("bilbao_stops");
     seed_layer("donostia_routes");
 
-    httplib::Client client(kTestHost, kTestPort);
+    httplib::Client client(kTestHost, port_);
     auto res = client.Get("/api/layers");
 
     ASSERT_NE(res, nullptr);
@@ -115,7 +118,7 @@ TEST_F(HttpAdapterTest, ListLayersReturnsJsonArray) {
 }
 
 TEST_F(HttpAdapterTest, ListLayersEmptyReturnsEmptyArray) {
-    httplib::Client client(kTestHost, kTestPort);
+    httplib::Client client(kTestHost, port_);
     auto res = client.Get("/api/layers");
 
     ASSERT_NE(res, nullptr);
@@ -132,7 +135,7 @@ TEST_F(HttpAdapterTest, ListLayersEmptyReturnsEmptyArray) {
 TEST_F(HttpAdapterTest, GetLayerReturnsGeoJsonFeatureCollection) {
     seed_layer("bilbao_stops");
 
-    httplib::Client client(kTestHost, kTestPort);
+    httplib::Client client(kTestHost, port_);
     auto res = client.Get("/api/layers/bilbao_stops");
 
     ASSERT_NE(res, nullptr);
@@ -163,7 +166,7 @@ TEST_F(HttpAdapterTest, GetLayerReturnsGeoJsonFeatureCollection) {
 }
 
 TEST_F(HttpAdapterTest, GetNonExistentLayerReturns404) {
-    httplib::Client client(kTestHost, kTestPort);
+    httplib::Client client(kTestHost, port_);
     auto res = client.Get("/api/layers/nonexistent_layer");
 
     ASSERT_NE(res, nullptr);
@@ -180,7 +183,7 @@ TEST_F(HttpAdapterTest, GetNonExistentLayerReturns404) {
 TEST_F(HttpAdapterTest, QueryWithValidParamsReturnsFeatures) {
     seed_layer("bilbao_stops");
 
-    httplib::Client client(kTestHost, kTestPort);
+    httplib::Client client(kTestHost, port_);
     // The test point is at lat=43.2630, lng=-2.9350.
     // Use a bounding box that contains it.
     auto res = client.Get(
@@ -201,7 +204,7 @@ TEST_F(HttpAdapterTest, QueryWithValidParamsReturnsFeatures) {
 TEST_F(HttpAdapterTest, QueryWithBboxOutsideReturnsEmptyCollection) {
     seed_layer("bilbao_stops");
 
-    httplib::Client client(kTestHost, kTestPort);
+    httplib::Client client(kTestHost, port_);
     // Bounding box that does NOT contain the test point (lat 43.26, lng -2.93).
     auto res = client.Get(
         "/api/query?min_lat=10.00&min_lng=10.00&max_lat=11.00&max_lng=11.00");
@@ -216,7 +219,7 @@ TEST_F(HttpAdapterTest, QueryWithBboxOutsideReturnsEmptyCollection) {
 }
 
 TEST_F(HttpAdapterTest, QueryMissingParamsReturns400) {
-    httplib::Client client(kTestHost, kTestPort);
+    httplib::Client client(kTestHost, port_);
 
     // Missing all parameters.
     auto res = client.Get("/api/query");
@@ -228,7 +231,7 @@ TEST_F(HttpAdapterTest, QueryMissingParamsReturns400) {
 }
 
 TEST_F(HttpAdapterTest, QueryPartialParamsReturns400) {
-    httplib::Client client(kTestHost, kTestPort);
+    httplib::Client client(kTestHost, port_);
 
     // Only min_lat provided.
     auto res = client.Get("/api/query?min_lat=43.00");
@@ -240,7 +243,7 @@ TEST_F(HttpAdapterTest, QueryPartialParamsReturns400) {
 }
 
 TEST_F(HttpAdapterTest, QueryNonNumericParamsReturns400) {
-    httplib::Client client(kTestHost, kTestPort);
+    httplib::Client client(kTestHost, port_);
 
     auto res = client.Get(
         "/api/query?min_lat=abc&min_lng=-3.00&max_lat=44.00&max_lng=-2.00");
@@ -254,7 +257,7 @@ TEST_F(HttpAdapterTest, QueryNonNumericParamsReturns400) {
 // ---------- Headers ----------
 
 TEST_F(HttpAdapterTest, ResponseHasContentTypeJson) {
-    httplib::Client client(kTestHost, kTestPort);
+    httplib::Client client(kTestHost, port_);
     auto res = client.Get("/api/layers");
 
     ASSERT_NE(res, nullptr);
@@ -264,7 +267,7 @@ TEST_F(HttpAdapterTest, ResponseHasContentTypeJson) {
 }
 
 TEST_F(HttpAdapterTest, ResponseHasCorsHeader) {
-    httplib::Client client(kTestHost, kTestPort);
+    httplib::Client client(kTestHost, port_);
     auto res = client.Get("/api/layers");
 
     ASSERT_NE(res, nullptr);
@@ -275,7 +278,7 @@ TEST_F(HttpAdapterTest, ResponseHasCorsHeader) {
 TEST_F(HttpAdapterTest, GetLayerResponseHasCorsHeader) {
     seed_layer("test_layer");
 
-    httplib::Client client(kTestHost, kTestPort);
+    httplib::Client client(kTestHost, port_);
     auto res = client.Get("/api/layers/test_layer");
 
     ASSERT_NE(res, nullptr);
@@ -284,7 +287,7 @@ TEST_F(HttpAdapterTest, GetLayerResponseHasCorsHeader) {
 }
 
 TEST_F(HttpAdapterTest, QueryResponseHasCorsHeader) {
-    httplib::Client client(kTestHost, kTestPort);
+    httplib::Client client(kTestHost, port_);
     auto res = client.Get(
         "/api/query?min_lat=43.00&min_lng=-3.00&max_lat=44.00&max_lng=-2.00");
 
@@ -294,7 +297,7 @@ TEST_F(HttpAdapterTest, QueryResponseHasCorsHeader) {
 }
 
 TEST_F(HttpAdapterTest, ErrorResponseHasCorsAndContentType) {
-    httplib::Client client(kTestHost, kTestPort);
+    httplib::Client client(kTestHost, port_);
     auto res = client.Get("/api/layers/nonexistent");
 
     ASSERT_NE(res, nullptr);

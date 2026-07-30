@@ -36,7 +36,7 @@ jobs:
         run: cmake --build --preset conan-debug --parallel
 
       - name: Run tests
-        run: ctest --preset conan-debug --output-on-failure --exclude-regex "Mongo(Integration|Property)Test"
+        run: ctest --preset conan-debug --output-on-failure --exclude-regex "MongoPersistence|MongoIntegration|MongoProperty"
 
       - name: Generate coverage report (LCOV)
         run: |

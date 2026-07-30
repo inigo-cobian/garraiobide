@@ -21,8 +21,6 @@ namespace {
 
 using namespace garraiobide::adapters;
 
-constexpr std::uint16_t kReadinessTestPort = 18081;
-
 /// Test fixture that introduces an artificial delay before listen()
 /// to deterministically trigger the race condition.
 class HttpAdapterReadinessTest : public ::testing::Test {
@@ -32,11 +30,11 @@ class HttpAdapterReadinessTest : public ::testing::Test {
             ingestion_, persistence_, presentation_);
         adapter_ = std::make_unique<adapters::http::HttpAdapter>(*service_);
 
-        // Start server with an artificial 200ms delay before listen().
+        // Start server with an artificial 200ms delay before listen_on_any_port().
         // This simulates CI load where the server thread doesn't get CPU time.
         server_thread_ = std::thread([this]() {
             std::this_thread::sleep_for(std::chrono::milliseconds(200));
-            adapter_->listen(kReadinessTestPort);
+            adapter_->listen_on_any_port();
         });
 
         // Poll until server is accepting connections.
@@ -49,6 +47,8 @@ class HttpAdapterReadinessTest : public ::testing::Test {
             }
             std::this_thread::sleep_for(kPollInterval);
         }
+
+        port_ = adapter_->assigned_port();
     }
 
     void TearDown() override {
@@ -64,10 +64,11 @@ class HttpAdapterReadinessTest : public ::testing::Test {
     std::unique_ptr<app::LayerService> service_;
     std::unique_ptr<adapters::http::HttpAdapter> adapter_;
     std::thread server_thread_;
+    int port_ = 0;
 };
 
 TEST_F(HttpAdapterReadinessTest, ServerRespondsAfterDelayedStart) {
-    httplib::Client client("localhost", kReadinessTestPort);
+    httplib::Client client("localhost", port_);
     auto res = client.Get("/api/layers");
 
     // With the polling loop, the server should be ready despite the 200ms delay.

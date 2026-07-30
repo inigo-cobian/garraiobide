@@ -16,6 +16,13 @@ class HttpAdapter {
     /// Start listening on the given port. Blocks until the server is stopped.
     void listen(std::uint16_t port);
 
+    /// Bind to an OS-assigned port and start listening. Blocks until stopped.
+    /// Returns the assigned port, or -1 on bind failure.
+    int listen_on_any_port();
+
+    /// Returns the port assigned by listen_on_any_port(), or 0 if not yet bound.
+    int assigned_port() const { return assigned_port_; }
+
     /// Stop the server (thread-safe).
     void stop();
 
@@ -37,6 +44,7 @@ class HttpAdapter {
 
     app::LayerService& service_;
     httplib::Server server_;
+    int assigned_port_ = 0;
 };
 
 }  // namespace garraiobide::adapters::http

@@ -106,6 +106,24 @@ void HttpAdapter::listen(std::uint16_t port) {
     server_.listen("0.0.0.0", port);
 }
 
+int HttpAdapter::listen_on_any_port() {
+    server_.set_default_headers({
+        {"Access-Control-Allow-Origin", "*"},
+        {"Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, PATCH, OPTIONS"},
+        {"Access-Control-Allow-Headers", "Content-Type"},
+    });
+
+    register_routes();
+
+    int port = server_.bind_to_any_port("0.0.0.0");
+    if (port < 0) {
+        return -1;
+    }
+    assigned_port_ = port;
+    server_.listen_after_bind();
+    return port;
+}
+
 void HttpAdapter::stop() {
     server_.stop();
 }
