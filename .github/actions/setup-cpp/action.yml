@@ -1,0 +1,45 @@
+name: Setup C++ (Conan + CMake)
+description: Install dependencies, cache Conan packages, and configure CMake
+
+inputs:
+  build_type:
+    description: Conan/CMake build type
+    required: false
+    default: Debug
+  cmake_extra_flags:
+    description: Extra flags passed to cmake configure
+    required: false
+    default: ""
+
+runs:
+  using: composite
+  steps:
+    - name: Install system dependencies
+      shell: bash
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y build-essential cmake g++ lcov ninja-build
+
+    - name: Install Conan
+      shell: bash
+      run: pip install conan
+
+    - name: Create Conan profile
+      shell: bash
+      run: conan profile detect
+
+    - name: Cache Conan packages
+      uses: actions/cache@v4
+      with:
+        path: ~/.conan2
+        key: conan-${{ runner.os }}-${{ hashFiles('conanfile.txt') }}
+        restore-keys: |
+          conan-${{ runner.os }}-
+
+    - name: Install dependencies (Conan)
+      shell: bash
+      run: conan install . --build=missing -s build_type=${{ inputs.build_type }}
+
+    - name: Configure CMake
+      shell: bash
+      run: cmake --preset conan-debug ${{ inputs.cmake_extra_flags }}
