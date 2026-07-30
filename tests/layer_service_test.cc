@@ -1,11 +1,11 @@
 #include <gtest/gtest.h>
 
-#include "mocks/mock_persistence_adapter.h"
 #include "../src/adapters/ui/mock_presentation_adapter.h"
 #include "../src/app/layer_service.h"
 #include "../src/core/domain/geo_feature.h"
 #include "../src/core/domain/geometry.h"
 #include "mocks/mock_ingestion_adapter.h"
+#include "mocks/mock_persistence_adapter.h"
 
 namespace garraiobide::app {
 namespace {
