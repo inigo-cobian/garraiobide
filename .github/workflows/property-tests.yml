@@ -1,0 +1,85 @@
+name: Property Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+  workflow_dispatch:
+    inputs:
+      reason:
+        description: "Reason for manual run"
+        required: false
+        type: string
+
+  # Sundays at 05:00 UTC
+  schedule:
+    - cron: "0 5 * * 0"
+
+concurrency:
+  group: property-tests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  property-tests:
+    # Run always UNLESS it's a push event whose commit message does NOT contain '[ci run]'.
+    if: >-
+      github.event_name != 'push' ||
+      contains(github.event.head_commit.message, '[ci run]')
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Python dependencies
+        run: pip install -r tests/property/requirements.txt
+
+      - name: Setup C++ (Conan + CMake)
+        uses: ./.github/actions/setup-cpp
+        with:
+          cmake_extra_flags: '-DCMAKE_CXX_FLAGS="--coverage -fprofile-update=atomic" -DCMAKE_EXE_LINKER_FLAGS="--coverage"'
+
+      - name: Build
+        run: cmake --build --preset conan-debug --parallel
+
+      - name: Ensure binary is discoverable
+        run: |
+          # find_server_binary() in the test fixtures checks build/src/garraiobide_app
+          BINARY=$(find build -name garraiobide_app -type f -executable | head -1)
+          if [ -z "$BINARY" ]; then
+            echo "::error::garraiobide_app binary not found under build/"
+            exit 1
+          fi
+          echo "Found binary at: $BINARY"
+          mkdir -p build/src
+          ln -sf "$(realpath "$BINARY")" build/src/garraiobide_app
+
+      - name: Create data directory
+        run: mkdir -p data
+
+      - name: Run all property tests
+        run: pytest tests/property/ --tb=short -v
+
+      - name: Generate coverage report (LCOV)
+        if: always()
+        run: |
+          lcov --capture --directory build --output-file coverage.info --ignore-errors mismatch,unused,negative
+          lcov --remove coverage.info '/usr/*' --output-file coverage.info --ignore-errors mismatch,unused,negative
+          lcov --remove coverage.info '*/tests/*' --output-file coverage.info --ignore-errors mismatch,unused,negative
+          lcov --remove coverage.info '*/adapters/mock*' --output-file coverage.info --ignore-errors mismatch,unused,negative
+          lcov --list coverage.info --ignore-errors mismatch,unused,negative
+
+      - name: Upload coverage to Codecov
+        if: always()
+        uses: codecov/codecov-action@v4
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: coverage.info
+          flags: property
+          fail_ci_if_error: false
