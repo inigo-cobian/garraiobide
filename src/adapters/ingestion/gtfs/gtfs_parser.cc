@@ -77,89 +77,110 @@ core::domain::Layer build_stop_layer(const std::vector<CsvRow>& stops,
     return layer;
 }
 
-/// Build route geometry by selecting the longest trip variant.
-core::domain::LineString build_route_geometry(
+/// Extract a sorted LineString from a given shape_id.
+core::domain::LineString extract_shape_line(
+    const std::string& shape_id,
+    const std::vector<CsvRow>& shapes) {
+
+    struct ShapePt { int seq; core::domain::Coordinate coord; };
+    std::vector<ShapePt> pts;
+    for (const auto& row : shapes) {
+        auto sid = row.find("shape_id");
+        if (sid == row.end() || sid->second != shape_id) continue;
+        auto lat = row.find("shape_pt_lat");
+        auto lon = row.find("shape_pt_lon");
+        auto seq = row.find("shape_pt_sequence");
+        if (lat == row.end() || lon == row.end() || seq == row.end()) continue;
+        pts.push_back({std::stoi(seq->second),
+            {.latitude = std::stod(lat->second), .longitude = std::stod(lon->second)}});
+    }
+    std::sort(pts.begin(), pts.end(),
+        [](const ShapePt& a, const ShapePt& b) { return a.seq < b.seq; });
+
+    core::domain::LineString line;
+    for (const auto& p : pts) line.vertices.push_back(p.coord);
+    return line;
+}
+
+/// Build route geometry by combining all unique shapes across trips.
+/// Returns a LineString if a single shape, MultiLineString if multiple,
+/// or falls back to stop coordinates if no shapes are available.
+core::domain::Geometry build_route_geometry(
     const std::string& route_id,
     const std::vector<CsvRow>& trips,
     const std::vector<CsvRow>& stop_times,
     const std::vector<CsvRow>& stops,
     const std::vector<CsvRow>& shapes) {
 
+    // Collect all unique shape_ids referenced by trips of this route.
+    std::vector<std::string> unique_shape_ids;
+    for (const auto& trip : trips) {
+        auto rid_it = trip.find("route_id");
+        if (rid_it == trip.end() || rid_it->second != route_id) continue;
+
+        auto shape_id_it = trip.find("shape_id");
+        if (shape_id_it == trip.end() || shape_id_it->second.empty()) continue;
+
+        const std::string& sid = shape_id_it->second;
+        if (std::find(unique_shape_ids.begin(), unique_shape_ids.end(), sid)
+            == unique_shape_ids.end()) {
+            unique_shape_ids.push_back(sid);
+        }
+    }
+
+    // If we have shape data, build geometry from all unique shapes.
+    if (!unique_shape_ids.empty()) {
+        std::vector<core::domain::LineString> lines;
+        for (const auto& sid : unique_shape_ids) {
+            auto line = extract_shape_line(sid, shapes);
+            if (!line.vertices.empty()) lines.push_back(std::move(line));
+        }
+
+        if (lines.size() == 1) {
+            return lines[0];
+        }
+        if (lines.size() > 1) {
+            core::domain::MultiLineString multi;
+            for (auto& l : lines) {
+                multi.lines.push_back(std::move(l.vertices));
+            }
+            return multi;
+        }
+    }
+
+    // Fallback: build geometry from stop coordinates of the longest trip.
     std::unordered_map<std::string, const CsvRow*> stop_lookup;
     for (const auto& stop : stops) {
         auto id_it = stop.find("stop_id");
         if (id_it != stop.end()) stop_lookup[id_it->second] = &stop;
     }
 
-    std::vector<const CsvRow*> route_trips;
+    std::string best_trip_id;
+    std::size_t best_count = 0;
     for (const auto& trip : trips) {
         auto rid_it = trip.find("route_id");
-        if (rid_it != trip.end() && rid_it->second == route_id)
-            route_trips.push_back(&trip);
-    }
+        if (rid_it == trip.end() || rid_it->second != route_id) continue;
+        auto tid_it = trip.find("trip_id");
+        if (tid_it == trip.end()) continue;
 
-    struct TripCandidate {
-        std::string trip_id;
-        std::string shape_id;
-        std::size_t count{0};
-        bool uses_shapes{false};
-    };
-
-    std::vector<TripCandidate> candidates;
-    for (const auto* trip_row : route_trips) {
-        auto trip_id_it = trip_row->find("trip_id");
-        if (trip_id_it == trip_row->end()) continue;
-
-        TripCandidate c;
-        c.trip_id = trip_id_it->second;
-
-        auto shape_id_it = trip_row->find("shape_id");
-        if (shape_id_it != trip_row->end()) c.shape_id = shape_id_it->second;
-
-        if (!c.shape_id.empty()) {
-            for (const auto& row : shapes) {
-                auto sid = row.find("shape_id");
-                if (sid != row.end() && sid->second == c.shape_id) ++c.count;
-            }
-            if (c.count > 0) { c.uses_shapes = true; candidates.push_back(c); continue; }
-        }
-
+        std::size_t count = 0;
         for (const auto& st : stop_times) {
             auto tid = st.find("trip_id");
-            if (tid != st.end() && tid->second == c.trip_id) ++c.count;
+            if (tid != st.end() && tid->second == tid_it->second) ++count;
         }
-        candidates.push_back(c);
+        if (count > best_count) {
+            best_count = count;
+            best_trip_id = tid_it->second;
+        }
     }
 
-    if (candidates.empty()) return core::domain::LineString{};
-
-    const auto& best = *std::max_element(candidates.begin(), candidates.end(),
-        [](const TripCandidate& a, const TripCandidate& b) { return a.count < b.count; });
-
     core::domain::LineString line;
-
-    if (best.uses_shapes) {
-        struct ShapePt { int seq; core::domain::Coordinate coord; };
-        std::vector<ShapePt> pts;
-        for (const auto& row : shapes) {
-            auto sid = row.find("shape_id");
-            if (sid == row.end() || sid->second != best.shape_id) continue;
-            auto lat = row.find("shape_pt_lat");
-            auto lon = row.find("shape_pt_lon");
-            auto seq = row.find("shape_pt_sequence");
-            if (lat == row.end() || lon == row.end() || seq == row.end()) continue;
-            pts.push_back({std::stoi(seq->second),
-                {.latitude = std::stod(lat->second), .longitude = std::stod(lon->second)}});
-        }
-        std::sort(pts.begin(), pts.end(),
-            [](const ShapePt& a, const ShapePt& b) { return a.seq < b.seq; });
-        for (const auto& p : pts) line.vertices.push_back(p.coord);
-    } else {
+    if (!best_trip_id.empty()) {
         struct StEntry { int seq; std::string stop_id; };
         std::vector<StEntry> entries;
         for (const auto& st : stop_times) {
             auto tid = st.find("trip_id");
-            if (tid == st.end() || tid->second != best.trip_id) continue;
+            if (tid == st.end() || tid->second != best_trip_id) continue;
             auto seq = st.find("stop_sequence");
             auto sid = st.find("stop_id");
             if (seq == st.end() || sid == st.end()) continue;

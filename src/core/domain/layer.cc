@@ -16,6 +16,12 @@ struct CoordinateCollector {
         coords.insert(coords.end(), ls.vertices.begin(), ls.vertices.end());
     }
 
+    void operator()(const MultiLineString& mls) {
+        for (const auto& line : mls.lines) {
+            coords.insert(coords.end(), line.begin(), line.end());
+        }
+    }
+
     void operator()(const Polygon& poly) {
         for (const auto& ring : poly.rings) {
             coords.insert(coords.end(), ring.begin(), ring.end());

@@ -13,6 +13,7 @@ using core::domain::GeoFeature;
 using core::domain::Geometry;
 using core::domain::Layer;
 using core::domain::LineString;
+using core::domain::MultiLineString;
 using core::domain::Point;
 using core::domain::Polygon;
 using core::domain::Properties;
@@ -65,6 +66,17 @@ json geometry_to_json(const Geometry& geom) {
                     coords.push_back(coordinate_to_json(v));
                 }
                 j["coordinates"] = std::move(coords);
+            } else if constexpr (std::is_same_v<T, MultiLineString>) {
+                j["type"] = "MultiLineString";
+                json lines = json::array();
+                for (const auto& line : g.lines) {
+                    json line_coords = json::array();
+                    for (const auto& v : line) {
+                        line_coords.push_back(coordinate_to_json(v));
+                    }
+                    lines.push_back(std::move(line_coords));
+                }
+                j["coordinates"] = std::move(lines);
             } else if constexpr (std::is_same_v<T, Polygon>) {
                 j["type"] = "Polygon";
                 json rings = json::array();
@@ -93,6 +105,17 @@ Geometry json_to_geometry(const json& j) {
             vertices.push_back(json_to_coordinate(coord));
         }
         return LineString{.vertices = std::move(vertices)};
+    }
+    if (type == "MultiLineString") {
+        std::vector<std::vector<Coordinate>> lines;
+        for (const auto& line : j.at("coordinates")) {
+            std::vector<Coordinate> line_coords;
+            for (const auto& coord : line) {
+                line_coords.push_back(json_to_coordinate(coord));
+            }
+            lines.push_back(std::move(line_coords));
+        }
+        return MultiLineString{.lines = std::move(lines)};
     }
     // Polygon
     std::vector<std::vector<Coordinate>> rings;
@@ -194,6 +217,13 @@ bool geometry_intersects_bbox(const Geometry& geom, const BoundingBox& bbox) {
             } else if constexpr (std::is_same_v<T, LineString>) {
                 for (const auto& v : g.vertices) {
                     if (bbox.contains(v)) return true;
+                }
+                return false;
+            } else if constexpr (std::is_same_v<T, MultiLineString>) {
+                for (const auto& line : g.lines) {
+                    for (const auto& v : line) {
+                        if (bbox.contains(v)) return true;
+                    }
                 }
                 return false;
             } else if constexpr (std::is_same_v<T, Polygon>) {

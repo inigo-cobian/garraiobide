@@ -30,6 +30,16 @@ json geometry_to_json(const Geometry& geometry) {
                     coords.push_back(coordinate_to_json(vertex));
                 }
                 return {{"type", "LineString"}, {"coordinates", coords}};
+            } else if constexpr (std::is_same_v<T, MultiLineString>) {
+                json all_lines = json::array();
+                for (const auto& line : geo.lines) {
+                    json line_coords = json::array();
+                    for (const auto& vertex : line) {
+                        line_coords.push_back(coordinate_to_json(vertex));
+                    }
+                    all_lines.push_back(line_coords);
+                }
+                return {{"type", "MultiLineString"}, {"coordinates", all_lines}};
             } else if constexpr (std::is_same_v<T, Polygon>) {
                 json rings = json::array();
                 for (const auto& ring : geo.rings) {
