@@ -86,20 +86,45 @@
     return DEFAULT_ROUTE_COLOR;
   }
 
-  function getStopStyle(feature) {
+  function getStopRadius(zoom, isMain) {
+    // Scale radius with zoom: base sizes at zoom 13, grow/shrink from there
+    var base = isMain ? 7 : 4;
+    var scale = Math.max(0.5, (zoom - 8) / 5);
+    return Math.round(base * scale);
+  }
+
+  function getStopStyle(feature, zoom) {
     var props = feature.properties || {};
     var isMain = props.stop_type === 'parent_station';
-    var color = isMain ? '#000000' : '#888888';
-    var radius = isMain ? 8 : 5;
+    var borderColor = isMain ? '#000000' : '#888888';
+    var radius = getStopRadius(zoom || map.getZoom(), isMain);
     return {
       radius: radius,
-      color: color,
-      weight: isMain ? 2 : 1,
-      opacity: 0.9,
-      fillColor: color,
-      fillOpacity: isMain ? 0.7 : 0.4
+      color: borderColor,
+      weight: isMain ? 2.5 : 1.5,
+      opacity: 1,
+      fillColor: '#ffffff',
+      fillOpacity: 1
     };
   }
+
+  // Resize stop markers on zoom change
+  function updateStopRadii() {
+    var zoom = map.getZoom();
+    var names = Object.keys(activeLayers);
+    for (var i = 0; i < names.length; i++) {
+      if (!isStopsLayer(names[i])) continue;
+      activeLayers[names[i]].eachLayer(function (layer) {
+        if (layer.setRadius) {
+          var props = (layer.feature && layer.feature.properties) || {};
+          var isMain = props.stop_type === 'parent_station';
+          layer.setRadius(getStopRadius(zoom, isMain));
+        }
+      });
+    }
+  }
+
+  map.on('zoomend', updateStopRadii);
 
   function createGeoJsonLayer(geojsonData, options) {
     options = options || {};
@@ -115,7 +140,7 @@
     return L.geoJSON(geojsonData, {
       pointToLayer: function (feature, latlng) {
         if (layerType === 'stops') {
-          var stopStyle = getStopStyle(feature);
+          var stopStyle = getStopStyle(feature, map.getZoom());
           return L.circleMarker(latlng, stopStyle);
         }
         return L.circleMarker(latlng, {
@@ -137,6 +162,9 @@
             fillColor: routeColor,
             fillOpacity: 0.3
           };
+        }
+        if (layerType === 'stops') {
+          return getStopStyle(feature, map.getZoom());
         }
         return fallbackStyle;
       },
