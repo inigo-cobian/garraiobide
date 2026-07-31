@@ -26,6 +26,9 @@
   var routeVisibility = {};      // { layerName: { routeId: bool } } — per-route visibility
   var routeSubLayers = {};       // { layerName: { routeId: L.GeoJSON } } — per-route map layers
 
+  // Unified layer display mode: 'both', 'lines', 'stops'
+  var unifiedDisplayMode = {};   // { groupKey: 'both'|'lines'|'stops' }
+
   // Notification System
   var notificationsEl = document.getElementById('notifications');
 
@@ -265,9 +268,154 @@
       });
   }
 
+  // Group layer names into unified pairs (routes + stops with same prefix)
+  function groupLayerNames(layerNames) {
+    var groups = [];       // { key, label, routesLayer, stopsLayer }
+    var standalone = [];   // layer names that don't pair
+    var stopsMap = {};
+    var routesMap = {};
+
+    for (var i = 0; i < layerNames.length; i++) {
+      var name = layerNames[i];
+      if (isStopsLayer(name)) {
+        var prefix = name.replace(/_?stops$/i, '');
+        stopsMap[prefix] = name;
+      } else if (isRoutesLayer(name)) {
+        var prefix = name.replace(/_?routes$/i, '');
+        routesMap[prefix] = name;
+      }
+    }
+
+    var paired = {};
+    var prefixes = Object.keys(routesMap);
+    for (var i = 0; i < prefixes.length; i++) {
+      var p = prefixes[i];
+      if (stopsMap[p]) {
+        groups.push({
+          key: p,
+          label: p || 'Transit',
+          routesLayer: routesMap[p],
+          stopsLayer: stopsMap[p]
+        });
+        paired[routesMap[p]] = true;
+        paired[stopsMap[p]] = true;
+      }
+    }
+
+    for (var i = 0; i < layerNames.length; i++) {
+      if (!paired[layerNames[i]]) {
+        standalone.push(layerNames[i]);
+      }
+    }
+
+    return { groups: groups, standalone: standalone };
+  }
+
   function populateLayerList(layerNames) {
     layerListEl.innerHTML = '';
-    for (var i = 0; i < layerNames.length; i++) {
+    var grouped = groupLayerNames(layerNames);
+
+    // Render unified groups (routes + stops)
+    for (var g = 0; g < grouped.groups.length; g++) {
+      var group = grouped.groups[g];
+      var li = document.createElement('li');
+      li.className = 'layer-control__item';
+
+      // Main toggle for the unified group
+      var label = document.createElement('label');
+      label.className = 'layer-control__label';
+
+      var checkbox = document.createElement('input');
+      checkbox.type = 'checkbox';
+      checkbox.className = 'layer-control__checkbox';
+      checkbox.dataset.unifiedGroup = group.key;
+      checkbox.dataset.routesLayer = group.routesLayer;
+      checkbox.dataset.stopsLayer = group.stopsLayer;
+      checkbox.checked = !!(activeLayers[group.routesLayer] || activeLayers[group.stopsLayer]);
+      checkbox.setAttribute('aria-label', 'Toggle ' + group.label + ' lines and stops');
+      checkbox.addEventListener('change', onUnifiedGroupToggle);
+
+      var span = document.createElement('span');
+      span.className = 'layer-control__name';
+      span.textContent = group.label;
+
+      label.appendChild(checkbox);
+      label.appendChild(span);
+      li.appendChild(label);
+
+      // Display mode selector (Lines & Stops / Only Lines / Only Stops)
+      var modeContainer = document.createElement('div');
+      modeContainer.className = 'display-mode-selector';
+      modeContainer.dataset.groupKey = group.key;
+
+      var currentMode = unifiedDisplayMode[group.key] || 'both';
+      var modes = [
+        { value: 'both', label: 'Lines & Stops' },
+        { value: 'lines', label: 'Only Lines' },
+        { value: 'stops', label: 'Only Stops' }
+      ];
+
+      for (var m = 0; m < modes.length; m++) {
+        var modeLabel = document.createElement('label');
+        modeLabel.className = 'display-mode-selector__label';
+
+        var radio = document.createElement('input');
+        radio.type = 'radio';
+        radio.name = 'display-mode-' + group.key;
+        radio.className = 'display-mode-selector__radio';
+        radio.value = modes[m].value;
+        radio.checked = (modes[m].value === currentMode);
+        radio.dataset.groupKey = group.key;
+        radio.dataset.routesLayer = group.routesLayer;
+        radio.dataset.stopsLayer = group.stopsLayer;
+        radio.addEventListener('change', onDisplayModeChange);
+
+        var modeSpan = document.createElement('span');
+        modeSpan.className = 'display-mode-selector__text';
+        modeSpan.textContent = modes[m].label;
+
+        modeLabel.appendChild(radio);
+        modeLabel.appendChild(modeSpan);
+        modeContainer.appendChild(modeLabel);
+      }
+
+      li.appendChild(modeContainer);
+
+      // Secondary stops toggle (under the stops part of the group)
+      var subLabel = document.createElement('label');
+      subLabel.className = 'layer-control__label layer-control__label--sub';
+
+      var subCheckbox = document.createElement('input');
+      subCheckbox.type = 'checkbox';
+      subCheckbox.className = 'layer-control__checkbox';
+      subCheckbox.dataset.secondaryFor = group.stopsLayer;
+      subCheckbox.checked = !!showSecondary[group.stopsLayer];
+      subCheckbox.setAttribute('aria-label', 'Show secondary stops for ' + group.label);
+      subCheckbox.addEventListener('change', onSecondaryToggle);
+
+      var subSpan = document.createElement('span');
+      subSpan.className = 'layer-control__name layer-control__name--sub';
+      subSpan.textContent = 'Secondary stops';
+
+      subLabel.appendChild(subCheckbox);
+      subLabel.appendChild(subSpan);
+      li.appendChild(subLabel);
+
+      // Per-route filter list
+      var routeContainer = document.createElement('div');
+      routeContainer.className = 'route-filter-list';
+      routeContainer.id = 'route-filter-' + group.routesLayer;
+      li.appendChild(routeContainer);
+      if (routesGeoJsonCache[group.routesLayer]) {
+        buildRouteFilterItems(group.routesLayer, routeContainer);
+      }
+
+      layerListEl.appendChild(li);
+    }
+
+    // Render standalone layers (not paired)
+    for (var i = 0; i < grouped.standalone.length; i++) {
+      var name = grouped.standalone[i];
       var li = document.createElement('li');
       li.className = 'layer-control__item';
 
@@ -277,50 +425,49 @@
       var checkbox = document.createElement('input');
       checkbox.type = 'checkbox';
       checkbox.className = 'layer-control__checkbox';
-      checkbox.dataset.layerName = layerNames[i];
-      checkbox.checked = !!activeLayers[layerNames[i]];
-      checkbox.setAttribute('aria-label', 'Toggle layer ' + layerNames[i]);
-
+      checkbox.dataset.layerName = name;
+      checkbox.checked = !!activeLayers[name];
+      checkbox.setAttribute('aria-label', 'Toggle layer ' + name);
       checkbox.addEventListener('change', onLayerToggle);
 
       var span = document.createElement('span');
       span.className = 'layer-control__name';
-      span.textContent = layerNames[i];
+      span.textContent = name;
 
       label.appendChild(checkbox);
       label.appendChild(span);
       li.appendChild(label);
 
-      // Add secondary stops toggle for stops layers
-      if (isStopsLayer(layerNames[i])) {
-        var subLabel = document.createElement('label');
-        subLabel.className = 'layer-control__label layer-control__label--sub';
+      // If it's a standalone stops layer, add secondary toggle
+      if (isStopsLayer(name)) {
+        var subLabel2 = document.createElement('label');
+        subLabel2.className = 'layer-control__label layer-control__label--sub';
 
-        var subCheckbox = document.createElement('input');
-        subCheckbox.type = 'checkbox';
-        subCheckbox.className = 'layer-control__checkbox';
-        subCheckbox.dataset.secondaryFor = layerNames[i];
-        subCheckbox.checked = !!showSecondary[layerNames[i]];
-        subCheckbox.setAttribute('aria-label', 'Show secondary stops for ' + layerNames[i]);
-        subCheckbox.addEventListener('change', onSecondaryToggle);
+        var subCheckbox2 = document.createElement('input');
+        subCheckbox2.type = 'checkbox';
+        subCheckbox2.className = 'layer-control__checkbox';
+        subCheckbox2.dataset.secondaryFor = name;
+        subCheckbox2.checked = !!showSecondary[name];
+        subCheckbox2.setAttribute('aria-label', 'Show secondary stops for ' + name);
+        subCheckbox2.addEventListener('change', onSecondaryToggle);
 
-        var subSpan = document.createElement('span');
-        subSpan.className = 'layer-control__name layer-control__name--sub';
-        subSpan.textContent = 'Secondary stops';
+        var subSpan2 = document.createElement('span');
+        subSpan2.className = 'layer-control__name layer-control__name--sub';
+        subSpan2.textContent = 'Secondary stops';
 
-        subLabel.appendChild(subCheckbox);
-        subLabel.appendChild(subSpan);
-        li.appendChild(subLabel);
+        subLabel2.appendChild(subCheckbox2);
+        subLabel2.appendChild(subSpan2);
+        li.appendChild(subLabel2);
       }
 
-      // Add per-route filter list for routes layers
-      if (isRoutesLayer(layerNames[i])) {
+      // If it's a standalone routes layer, add route filter
+      if (isRoutesLayer(name)) {
         var routeContainer = document.createElement('div');
         routeContainer.className = 'route-filter-list';
-        routeContainer.id = 'route-filter-' + layerNames[i];
+        routeContainer.id = 'route-filter-' + name;
         li.appendChild(routeContainer);
-        if (routesGeoJsonCache[layerNames[i]]) {
-          buildRouteFilterItems(layerNames[i], routeContainer);
+        if (routesGeoJsonCache[name]) {
+          buildRouteFilterItems(name, routeContainer);
         }
       }
 
@@ -388,6 +535,50 @@
     } else {
       showSecondary[name] = false;
       removeSecondaryStopsLayer(name);
+    }
+  }
+
+  function onUnifiedGroupToggle(e) {
+    var groupKey = e.target.dataset.unifiedGroup;
+    var routesLayer = e.target.dataset.routesLayer;
+    var stopsLayer = e.target.dataset.stopsLayer;
+    var mode = unifiedDisplayMode[groupKey] || 'both';
+
+    if (e.target.checked) {
+      if (mode === 'both' || mode === 'lines') {
+        addLayer(routesLayer);
+      }
+      if (mode === 'both' || mode === 'stops') {
+        addLayer(stopsLayer);
+      }
+    } else {
+      removeLayer(routesLayer);
+      removeLayer(stopsLayer);
+    }
+  }
+
+  function onDisplayModeChange(e) {
+    var groupKey = e.target.dataset.groupKey;
+    var routesLayer = e.target.dataset.routesLayer;
+    var stopsLayer = e.target.dataset.stopsLayer;
+    var mode = e.target.value;
+
+    unifiedDisplayMode[groupKey] = mode;
+
+    // Only apply if the group is currently active
+    var isActive = !!(activeLayers[routesLayer] || activeLayers[stopsLayer]);
+    if (!isActive) return;
+
+    // Apply the new mode
+    if (mode === 'both') {
+      if (!activeLayers[routesLayer]) addLayer(routesLayer);
+      if (!activeLayers[stopsLayer]) addLayer(stopsLayer);
+    } else if (mode === 'lines') {
+      if (!activeLayers[routesLayer]) addLayer(routesLayer);
+      if (activeLayers[stopsLayer]) removeLayer(stopsLayer);
+    } else if (mode === 'stops') {
+      if (activeLayers[routesLayer]) removeLayer(routesLayer);
+      if (!activeLayers[stopsLayer]) addLayer(stopsLayer);
     }
   }
 
