@@ -102,6 +102,48 @@ body {
   font-style: italic;
 }
 
+/* Display mode selector (Lines & Stops / Only Lines / Only Stops) */
+.display-mode-selector {
+  display: flex;
+  gap: 2px;
+  padding: 4px 8px 4px 24px;
+}
+
+.display-mode-selector__label {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+  font-size: 11px;
+  color: #555;
+  padding: 2px 6px;
+  border-radius: 3px;
+  transition: background-color 0.15s ease;
+}
+
+.display-mode-selector__label:hover {
+  background-color: #f0f4ff;
+}
+
+.display-mode-selector__radio {
+  width: 12px;
+  height: 12px;
+  accent-color: #2563eb;
+  cursor: pointer;
+  flex-shrink: 0;
+  margin: 0;
+}
+
+.display-mode-selector__radio:focus {
+  outline: 2px solid #2563eb;
+  outline-offset: 1px;
+}
+
+.display-mode-selector__text {
+  user-select: none;
+  white-space: nowrap;
+}
+
 /* Route filter list */
 .route-filter-list {
   margin: 0;
