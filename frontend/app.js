@@ -21,6 +21,11 @@
   var showSecondary = {};        // { layerName: bool }
   var queryResultsLayer = null;  // L.GeoJSON layer for spatial query results
 
+  // Route filtering state
+  var routesGeoJsonCache = {};   // { layerName: raw GeoJSON } — cached for route filtering
+  var routeVisibility = {};      // { layerName: { routeId: bool } } — per-route visibility
+  var routeSubLayers = {};       // { layerName: { routeId: L.GeoJSON } } — per-route map layers
+
   // Notification System
   var notificationsEl = document.getElementById('notifications');
 
@@ -88,6 +93,33 @@
       return '#' + raw;
     }
     return DEFAULT_ROUTE_COLOR;
+  }
+
+  function getRouteDisplayName(feature) {
+    var props = feature.properties || {};
+    return props.route_long_name || props.route_short_name || feature.id || 'Unknown route';
+  }
+
+  function getRouteId(feature) {
+    return feature.id || (feature.properties && feature.properties.route_short_name) || getRouteDisplayName(feature);
+  }
+
+  function extractUniqueRoutes(geojsonData) {
+    var routeMap = {};
+    for (var i = 0; i < geojsonData.features.length; i++) {
+      var f = geojsonData.features[i];
+      var id = getRouteId(f);
+      if (!routeMap[id]) {
+        routeMap[id] = {
+          id: id,
+          displayName: getRouteDisplayName(f),
+          color: getRouteColor(f)
+        };
+      }
+    }
+    var routes = Object.keys(routeMap).map(function (k) { return routeMap[k]; });
+    routes.sort(function (a, b) { return a.displayName.localeCompare(b.displayName); });
+    return routes;
   }
 
   function getStopRadius(zoom, isMain) {
@@ -281,7 +313,68 @@
         li.appendChild(subLabel);
       }
 
+      // Add per-route filter list for routes layers
+      if (isRoutesLayer(layerNames[i])) {
+        var routeContainer = document.createElement('div');
+        routeContainer.className = 'route-filter-list';
+        routeContainer.id = 'route-filter-' + layerNames[i];
+        li.appendChild(routeContainer);
+        if (routesGeoJsonCache[layerNames[i]]) {
+          buildRouteFilterItems(layerNames[i], routeContainer);
+        }
+      }
+
       layerListEl.appendChild(li);
+    }
+  }
+
+  function buildRouteFilterItems(layerName, container) {
+    var geojsonData = routesGeoJsonCache[layerName];
+    if (!geojsonData) return;
+    var routes = extractUniqueRoutes(geojsonData);
+    container.innerHTML = '';
+    for (var i = 0; i < routes.length; i++) {
+      var route = routes[i];
+      var subLabel = document.createElement('label');
+      subLabel.className = 'layer-control__label layer-control__label--route';
+
+      var subCheckbox = document.createElement('input');
+      subCheckbox.type = 'checkbox';
+      subCheckbox.className = 'layer-control__checkbox';
+      subCheckbox.dataset.routeLayer = layerName;
+      subCheckbox.dataset.routeId = route.id;
+      subCheckbox.checked = !routeVisibility[layerName] || routeVisibility[layerName][route.id] !== false;
+      subCheckbox.setAttribute('aria-label', 'Toggle route ' + route.displayName);
+      subCheckbox.addEventListener('change', onRouteToggle);
+
+      var swatch = document.createElement('span');
+      swatch.className = 'route-color-swatch';
+      swatch.style.backgroundColor = route.color;
+
+      var nameSpan = document.createElement('span');
+      nameSpan.className = 'layer-control__name layer-control__name--route';
+      nameSpan.textContent = route.displayName;
+
+      subLabel.appendChild(subCheckbox);
+      subLabel.appendChild(swatch);
+      subLabel.appendChild(nameSpan);
+      container.appendChild(subLabel);
+    }
+  }
+
+  function onRouteToggle(e) {
+    var layerName = e.target.dataset.routeLayer;
+    var routeId = e.target.dataset.routeId;
+    if (!routeVisibility[layerName]) routeVisibility[layerName] = {};
+    routeVisibility[layerName][routeId] = e.target.checked;
+    if (e.target.checked) {
+      if (routeSubLayers[layerName] && routeSubLayers[layerName][routeId]) {
+        routeSubLayers[layerName][routeId].addTo(map);
+      }
+    } else {
+      if (routeSubLayers[layerName] && routeSubLayers[layerName][routeId]) {
+        map.removeLayer(routeSubLayers[layerName][routeId]);
+      }
     }
   }
 
@@ -356,6 +449,43 @@
           if (showSecondary[name]) {
             buildSecondaryStopsLayer(name);
           }
+        } else if (layerType === 'routes') {
+          // Split into per-route sub-layers for individual visibility control
+          routesGeoJsonCache[name] = geojsonData;
+          if (!routeVisibility[name]) routeVisibility[name] = {};
+          routeSubLayers[name] = {};
+
+          var routeFeatures = {};
+          for (var k = 0; k < geojsonData.features.length; k++) {
+            var feat = geojsonData.features[k];
+            var rId = getRouteId(feat);
+            if (!routeFeatures[rId]) routeFeatures[rId] = [];
+            routeFeatures[rId].push(feat);
+          }
+
+          var allBounds = null;
+          var rIds = Object.keys(routeFeatures);
+          for (var j = 0; j < rIds.length; j++) {
+            var id = rIds[j];
+            var fc = { type: 'FeatureCollection', features: routeFeatures[id] };
+            var sub = createGeoJsonLayer(fc, { layerType: 'routes', style: DEFAULT_LAYER_STYLE });
+            if (routeVisibility[name][id] !== false) {
+              sub.addTo(map);
+              if (routeVisibility[name][id] === undefined) routeVisibility[name][id] = true;
+            }
+            routeSubLayers[name][id] = sub;
+            var b = sub.getBounds();
+            if (b.isValid()) allBounds = allBounds ? allBounds.extend(b) : b;
+          }
+
+          // Placeholder so the main checkbox considers the layer active
+          activeLayers[name] = L.layerGroup().addTo(map);
+
+          // Populate route filter checkboxes
+          var container = document.getElementById('route-filter-' + name);
+          if (container) buildRouteFilterItems(name, container);
+
+          if (allBounds) map.fitBounds(allBounds, { padding: [30, 30] });
         } else {
           layer = createGeoJsonLayer(geojsonData, {
             layerType: layerType,
@@ -365,10 +495,12 @@
           activeLayers[name] = layer;
         }
 
-        // Fit bounds
-        var bounds = activeLayers[name].getBounds();
-        if (bounds.isValid()) {
-          map.fitBounds(bounds, { padding: [30, 30] });
+        // Fit bounds (routes handled above)
+        if (layerType !== 'routes' && activeLayers[name] && activeLayers[name].getBounds) {
+          var bounds = activeLayers[name].getBounds();
+          if (bounds.isValid()) {
+            map.fitBounds(bounds, { padding: [30, 30] });
+          }
         }
       })
       .catch(function (err) {
@@ -469,6 +601,19 @@
     }
     removeSecondaryStopsLayer(name);
     delete stopsGeoJsonCache[name];
+
+    // Clean up per-route sub-layers
+    if (routeSubLayers[name]) {
+      var rIds = Object.keys(routeSubLayers[name]);
+      for (var i = 0; i < rIds.length; i++) {
+        if (map.hasLayer(routeSubLayers[name][rIds[i]])) {
+          map.removeLayer(routeSubLayers[name][rIds[i]]);
+        }
+      }
+      delete routeSubLayers[name];
+    }
+    delete routesGeoJsonCache[name];
+    delete routeVisibility[name];
   }
 
   // Leaflet.draw Rectangle Control
