@@ -102,6 +102,32 @@ body {
   font-style: italic;
 }
 
+/* Route filter list */
+.route-filter-list {
+  margin: 0;
+  padding: 0;
+}
+
+.layer-control__label--route {
+  padding-left: 24px;
+  font-size: 12px;
+}
+
+.layer-control__name--route {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.route-color-swatch {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+  border: 1px solid rgba(0, 0, 0, 0.2);
+  flex-shrink: 0;
+}
+
 /* Notifications - fixed top-right, below layer control */
 .notifications {
   position: fixed;
