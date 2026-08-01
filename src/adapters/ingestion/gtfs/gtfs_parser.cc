@@ -5,6 +5,10 @@
 #include <cstdint>
 #include <sstream>
 #include <string>
+#include <unordered_map>
+#include <unordered_set>
+
+#include <nlohmann/json.hpp>
 
 namespace garraiobide::adapters::ingestion::gtfs {
 
@@ -23,12 +27,75 @@ std::string classify_stop(const CsvRow& stop_row) {
     return "standalone";
 }
 
-/// Build a stop layer from the GTFS stops data.
+/// Build a map of stop_id → set of route_ids by joining stop_times and trips.
+/// Then merge parent↔child relationships so that parents and children share
+/// the union of all route memberships across the station group.
+std::unordered_map<std::string, std::unordered_set<std::string>>
+build_stop_route_map(const std::vector<CsvRow>& stops,
+                     const std::vector<CsvRow>& stop_times,
+                     const std::vector<CsvRow>& trips) {
+    std::unordered_map<std::string, std::unordered_set<std::string>> stop_route_map;
+
+    // Index trips by trip_id → route_id
+    std::unordered_map<std::string, std::string> trip_route_index;
+    for (const auto& trip : trips) {
+        auto tid = trip.find("trip_id");
+        auto rid = trip.find("route_id");
+        if (tid != trip.end() && rid != trip.end()) {
+            trip_route_index[tid->second] = rid->second;
+        }
+    }
+
+    // Join stop_times → trips to populate stop_route_map
+    for (const auto& st : stop_times) {
+        auto sid = st.find("stop_id");
+        auto tid = st.find("trip_id");
+        if (sid == st.end() || tid == st.end()) continue;
+        auto it = trip_route_index.find(tid->second);
+        if (it != trip_route_index.end()) {
+            stop_route_map[sid->second].insert(it->second);
+        }
+    }
+
+    // Build parent_id → children and child → parent relationships
+    std::unordered_map<std::string, std::vector<std::string>> parent_children;
+    for (const auto& stop : stops) {
+        auto sid = stop.find("stop_id");
+        auto ps = stop.find("parent_station");
+        if (sid == stop.end()) continue;
+        if (ps != stop.end() && !ps->second.empty()) {
+            parent_children[ps->second].push_back(sid->second);
+        }
+    }
+
+    // Merge: parent gets all children's routes, then children get merged parent routes
+    for (const auto& [parent_id, children] : parent_children) {
+        auto& parent_routes = stop_route_map[parent_id];
+        for (const auto& child_id : children) {
+            auto& child_routes = stop_route_map[child_id];
+            // Parent absorbs child routes
+            parent_routes.insert(child_routes.begin(), child_routes.end());
+        }
+        // Children absorb merged parent routes
+        for (const auto& child_id : children) {
+            stop_route_map[child_id].insert(parent_routes.begin(), parent_routes.end());
+        }
+    }
+
+    return stop_route_map;
+}
+
+/// Build a stop layer from the GTFS feed data (stops, stop_times, trips).
 core::domain::Layer build_stop_layer(const std::vector<CsvRow>& stops,
+                                     const std::vector<CsvRow>& stop_times,
+                                     const std::vector<CsvRow>& trips,
                                      const std::string& layer_name) {
     core::domain::Layer layer;
     layer.name = layer_name;
     layer.scale = core::domain::SpatialScale::Urban;
+
+    // Compute route membership for each stop
+    auto stop_route_map = build_stop_route_map(stops, stop_times, trips);
 
     for (const auto& stop_row : stops) {
         auto stop_id_it = stop_row.find("stop_id");
@@ -70,6 +137,16 @@ core::domain::Layer build_stop_layer(const std::vector<CsvRow>& stops,
         if (url_it != stop_row.end() && !url_it->second.empty()) {
             feature.properties["stop_url"] = url_it->second;
         }
+
+        // Serialize route_ids as a JSON array string
+        nlohmann::json route_ids_arr = nlohmann::json::array();
+        auto route_it = stop_route_map.find(stop_id_it->second);
+        if (route_it != stop_route_map.end()) {
+            for (const auto& r : route_it->second) {
+                route_ids_arr.push_back(r);
+            }
+        }
+        feature.properties["route_ids"] = route_ids_arr.dump();
 
         layer.features.push_back(std::move(feature));
     }
@@ -271,7 +348,7 @@ parse_gtfs_feed(const GtfsFeed& feed) {
     }
 
     GtfsLayers layers;
-    layers.stops = build_stop_layer(feed.stops, prefix + "_stops");
+    layers.stops = build_stop_layer(feed.stops, feed.stop_times, feed.trips, prefix + "_stops");
     layers.routes = build_route_layer(feed, prefix + "_routes");
 
     return layers;

@@ -65,6 +65,16 @@ json property_value_to_json(const PropertyValue& value) {
 json properties_to_json(const Properties& properties) {
     json obj = json::object();
     for (const auto& [key, value] : properties) {
+        if (key == "route_ids") {
+            const auto* str_val = std::get_if<std::string>(&value);
+            if (str_val) {
+                auto parsed = json::parse(*str_val, nullptr, false);
+                if (!parsed.is_discarded() && parsed.is_array()) {
+                    obj[key] = parsed;
+                    continue;
+                }
+            }
+        }
         obj[key] = property_value_to_json(value);
     }
     return obj;

@@ -125,6 +125,69 @@
     return routes;
   }
 
+  /**
+   * Determine if a stop feature should be visible given current route visibility.
+   * @param {Object} feature - GeoJSON feature with properties.route_ids
+   * @param {Object} routeVis - { routeId: boolean } visibility map
+   * @param {string} mode - 'both', 'lines', or 'stops'
+   * @returns {boolean} true if the stop should be shown
+   */
+  function isStopVisible(feature, routeVis, mode) {
+    // In Only Stops mode, all stops are visible
+    if (mode === 'stops') return true;
+
+    var props = feature.properties || {};
+    var routeIds = props.route_ids;
+
+    // No route_ids or empty array → always visible
+    if (!routeIds || !Array.isArray(routeIds) || routeIds.length === 0) {
+      return true;
+    }
+
+    // A stop is visible if at least one of its route_ids is visible
+    for (var i = 0; i < routeIds.length; i++) {
+      if (routeVis[routeIds[i]] !== false) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /**
+   * Rebuild the visible stops layer from stopsGeoJsonCache filtered through isStopVisible.
+   * Removes the current stops map layer, filters features, creates a new GeoJSON layer, adds to map.
+   * Also rebuilds the secondary stops layer if showSecondary is active for this layer.
+   * @param {string} stopsLayerName - The name of the stops layer to rebuild
+   * @param {string} groupKey - The group key for looking up display mode and route visibility
+   */
+  function rebuildStopsLayer(stopsLayerName, groupKey) {
+    var geojsonData = stopsGeoJsonCache[stopsLayerName];
+    if (!geojsonData || !activeLayers[stopsLayerName]) return;
+
+    var mode = unifiedDisplayMode[groupKey] || 'both';
+    var routesLayerName = groupKey + '_routes';
+    var routeVis = routeVisibility[routesLayerName] || {};
+
+    // Remove current stops layer
+    map.removeLayer(activeLayers[stopsLayerName]);
+
+    // Filter features — only parent_station stops, filtered by route visibility
+    var visibleFeatures = geojsonData.features.filter(function (f) {
+      if (f.properties && f.properties.stop_type !== 'parent_station') return false;
+      return isStopVisible(f, routeVis, mode);
+    });
+
+    var filtered = { type: 'FeatureCollection', features: visibleFeatures };
+    var layer = createGeoJsonLayer(filtered, { layerType: 'stops' });
+    layer.addTo(map);
+    activeLayers[stopsLayerName] = layer;
+
+    // Rebuild secondary stops if visible
+    if (showSecondary[stopsLayerName]) {
+      buildSecondaryStopsLayer(stopsLayerName);
+    }
+  }
+
   function getStopRadius(zoom, isMain) {
     // Scale radius with zoom: base sizes at zoom 13, grow/shrink from there
     var base = isMain ? 7 : 4;
@@ -523,6 +586,11 @@
         map.removeLayer(routeSubLayers[layerName][routeId]);
       }
     }
+
+    // Rebuild the paired stops layer to reflect new route visibility
+    var groupKey = layerName.replace(/_?routes$/i, '');
+    var stopsLayerName = groupKey + '_stops';
+    rebuildStopsLayer(stopsLayerName, groupKey);
   }
 
   function onSecondaryToggle(e) {
@@ -579,6 +647,13 @@
     } else if (mode === 'stops') {
       if (activeLayers[routesLayer]) removeLayer(routesLayer);
       if (!activeLayers[stopsLayer]) addLayer(stopsLayer);
+    }
+
+    // Rebuild stops layer to apply or remove route-based filtering:
+    // - 'stops' mode: restores all stops (isStopVisible returns true for all)
+    // - 'both' mode: applies current route visibility filtering
+    if (mode === 'both' || mode === 'stops') {
+      rebuildStopsLayer(stopsLayer, groupKey);
     }
   }
 
@@ -711,6 +786,12 @@
       delete secondaryStopsLayers[name];
     }
 
+    // Determine mode and route visibility for filtering child stops
+    var groupKey = name.replace(/_?stops$/i, '');
+    var mode = unifiedDisplayMode[groupKey] || 'both';
+    var routesLayerName = groupKey + '_routes';
+    var routeVis = routeVisibility[routesLayerName] || {};
+
     // Index parent stations by id
     var parentIndex = {};
     for (var i = 0; i < geojsonData.features.length; i++) {
@@ -727,6 +808,9 @@
     for (var i = 0; i < geojsonData.features.length; i++) {
       var f = geojsonData.features[i];
       if (!f.properties || f.properties.stop_type !== 'child_stop') continue;
+
+      // Apply route visibility filter — skip child stops not visible
+      if (!isStopVisible(f, routeVis, mode)) continue;
 
       var childCoords = f.geometry.coordinates; // [lng, lat]
       var parentId = f.properties.parent_station;
