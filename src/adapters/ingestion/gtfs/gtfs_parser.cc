@@ -279,12 +279,160 @@ core::domain::Geometry build_route_geometry(
     return line;
 }
 
+/// Build per-route ordered station sequence.
+/// For each route, picks the longest trip and extracts parent stations ordered
+/// by stop_sequence. Returns a map of route_id → JSON array string where each
+/// entry is {"name": <station_name>, "child_count": <n>}.
+std::unordered_map<std::string, std::string>
+build_station_sequences(const std::vector<CsvRow>& stops,
+                        const std::vector<CsvRow>& stop_times,
+                        const std::vector<CsvRow>& trips) {
+    // Index trips by trip_id → route_id
+    std::unordered_map<std::string, std::string> trip_route_index;
+    for (const auto& trip : trips) {
+        auto tid = trip.find("trip_id");
+        auto rid = trip.find("route_id");
+        if (tid != trip.end() && rid != trip.end()) {
+            trip_route_index[tid->second] = rid->second;
+        }
+    }
+
+    // Group stop_times by trip_id, tracking count per trip
+    std::unordered_map<std::string, std::size_t> trip_stop_count;
+    for (const auto& st : stop_times) {
+        auto tid = st.find("trip_id");
+        if (tid != st.end()) {
+            trip_stop_count[tid->second]++;
+        }
+    }
+
+    // For each route, find the trip with the most stops (the "canonical" trip)
+    std::unordered_map<std::string, std::string> route_best_trip;  // route_id → trip_id
+    std::unordered_map<std::string, std::size_t> route_best_count;
+    for (const auto& [trip_id, count] : trip_stop_count) {
+        auto rit = trip_route_index.find(trip_id);
+        if (rit == trip_route_index.end()) continue;
+        const std::string& route_id = rit->second;
+        if (count > route_best_count[route_id]) {
+            route_best_count[route_id] = count;
+            route_best_trip[route_id] = trip_id;
+        }
+    }
+
+    // Build stop lookup: stop_id → row
+    std::unordered_map<std::string, const CsvRow*> stop_lookup;
+    for (const auto& stop : stops) {
+        auto id_it = stop.find("stop_id");
+        if (id_it != stop.end()) stop_lookup[id_it->second] = &stop;
+    }
+
+    // Build parent_station → child count
+    std::unordered_map<std::string, int> parent_child_count;
+    for (const auto& stop : stops) {
+        auto ps = stop.find("parent_station");
+        if (ps != stop.end() && !ps->second.empty()) {
+            parent_child_count[ps->second]++;
+        }
+    }
+    // Standalone stops with same stop_id as a parent should count children of that parent
+    // Actually: count children for parent_station stops and standalone stops that have
+    // a corresponding est_ parent. Let's count based on the parent_station field.
+
+    // For each route's best trip, extract ordered parent stations
+    std::unordered_map<std::string, std::string> result;
+
+    for (const auto& [route_id, trip_id] : route_best_trip) {
+        // Collect stop_times for this trip, ordered by stop_sequence
+        struct StEntry { int seq; std::string stop_id; };
+        std::vector<StEntry> entries;
+        for (const auto& st : stop_times) {
+            auto tid = st.find("trip_id");
+            if (tid == st.end() || tid->second != trip_id) continue;
+            auto seq = st.find("stop_sequence");
+            auto sid = st.find("stop_id");
+            if (seq == st.end() || sid == st.end()) continue;
+            entries.push_back({std::stoi(seq->second), sid->second});
+        }
+        std::sort(entries.begin(), entries.end(),
+            [](const StEntry& a, const StEntry& b) { return a.seq < b.seq; });
+
+        // For each stop in the trip, resolve to its parent station
+        // and deduplicate consecutive parents
+        nlohmann::json sequence_arr = nlohmann::json::array();
+        std::string last_parent_id;
+
+        for (const auto& entry : entries) {
+            auto stop_it = stop_lookup.find(entry.stop_id);
+            if (stop_it == stop_lookup.end()) continue;
+            const CsvRow& stop_row = *stop_it->second;
+
+            // Determine the parent station id
+            std::string parent_id;
+            std::string station_name;
+
+            auto lt_it = stop_row.find("location_type");
+            bool is_parent = (lt_it != stop_row.end() && lt_it->second == "1");
+
+            if (is_parent) {
+                parent_id = entry.stop_id;
+            } else {
+                auto ps_it = stop_row.find("parent_station");
+                if (ps_it != stop_row.end() && !ps_it->second.empty()) {
+                    parent_id = ps_it->second;
+                } else {
+                    // Standalone stop — treat itself as the parent
+                    parent_id = entry.stop_id;
+                }
+            }
+
+            // Skip if same parent as previous (avoid duplicates)
+            if (parent_id == last_parent_id) continue;
+            last_parent_id = parent_id;
+
+            // Get the parent station name
+            auto parent_it = stop_lookup.find(parent_id);
+            if (parent_it != stop_lookup.end()) {
+                auto name_it = parent_it->second->find("stop_name");
+                if (name_it != parent_it->second->end()) {
+                    station_name = name_it->second;
+                }
+            }
+            if (station_name.empty()) {
+                // Fallback: use the stop's own name
+                auto name_it = stop_row.find("stop_name");
+                if (name_it != stop_row.end()) {
+                    station_name = name_it->second;
+                }
+            }
+
+            // Count children of this parent station
+            int child_count = 0;
+            auto cc_it = parent_child_count.find(parent_id);
+            if (cc_it != parent_child_count.end()) {
+                child_count = cc_it->second;
+            }
+
+            nlohmann::json station_obj;
+            station_obj["name"] = station_name;
+            station_obj["child_count"] = child_count;
+            sequence_arr.push_back(station_obj);
+        }
+
+        result[route_id] = sequence_arr.dump();
+    }
+
+    return result;
+}
+
 /// Build route layer from GTFS feed data.
 core::domain::Layer build_route_layer(const GtfsFeed& feed,
                                       const std::string& layer_name) {
     core::domain::Layer layer;
     layer.name = layer_name;
     layer.scale = core::domain::SpatialScale::Urban;
+
+    // Build per-route station sequences
+    auto sequences = build_station_sequences(feed.stops, feed.stop_times, feed.trips);
 
     for (const auto& route_row : feed.routes) {
         auto route_id_it = route_row.find("route_id");
@@ -315,6 +463,12 @@ core::domain::Layer build_route_layer(const GtfsFeed& feed,
         auto tc = route_row.find("route_text_color");
         if (tc != route_row.end() && !tc->second.empty())
             feature.properties["route_text_color"] = tc->second;
+
+        // Attach station sequence for this route
+        auto seq_it = sequences.find(route_id);
+        if (seq_it != sequences.end()) {
+            feature.properties["station_sequence"] = seq_it->second;
+        }
 
         layer.features.push_back(std::move(feature));
     }

@@ -65,7 +65,7 @@ json property_value_to_json(const PropertyValue& value) {
 json properties_to_json(const Properties& properties) {
     json obj = json::object();
     for (const auto& [key, value] : properties) {
-        if (key == "route_ids") {
+        if (key == "route_ids" || key == "station_sequence") {
             const auto* str_val = std::get_if<std::string>(&value);
             if (str_val) {
                 auto parsed = json::parse(*str_val, nullptr, false);
