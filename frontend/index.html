@@ -17,6 +17,16 @@
 <body>
   <div id="map" role="application" aria-label="Interactive map"></div>
 
+  <div id="line-report" class="line-report" aria-label="Line station report">
+    <h2 class="line-report__title">Line Report</h2>
+    <label class="line-report__select-label" for="line-select">Select a line:</label>
+    <select id="line-select" class="line-report__select" aria-label="Select a transit line">
+      <option value="">-- Choose a line --</option>
+    </select>
+    <ol id="station-list" class="line-report__station-list" aria-live="polite"></ol>
+    <p id="line-report-empty" class="line-report__empty" hidden>No station sequence available for this line.</p>
+  </div>
+
   <div id="layer-control" class="layer-control" aria-label="Layer selector">
     <h2 class="layer-control__title">Layers</h2>
     <ul id="layer-list" class="layer-control__list"></ul>

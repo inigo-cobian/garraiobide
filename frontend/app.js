@@ -1043,6 +1043,7 @@
       if (result.status === 200) {
         showNotification('GTFS import complete', 'success');
         refreshLayerList();
+        fetchRoutesForLineReport();
       } else {
         showNotification(result.body.error || 'Upload failed', 'error');
       }
@@ -1060,5 +1061,131 @@
 
   // Initialize on Load
   fetchLayers();
+
+  // -------------------------------------------------------------------------
+  // Line Report
+  // -------------------------------------------------------------------------
+  var lineSelect = document.getElementById('line-select');
+  var stationListEl = document.getElementById('station-list');
+  var lineReportEmpty = document.getElementById('line-report-empty');
+
+  // Cache of routes GeoJSON per layer for the line report
+  var lineReportRoutesCache = null; // { features: [...] }
+
+  function populateLineSelect(geojsonData) {
+    lineReportRoutesCache = geojsonData;
+    lineSelect.innerHTML = '<option value="">-- Choose a line --</option>';
+
+    if (!geojsonData || !geojsonData.features) return;
+
+    // Sort routes by display name
+    var routes = geojsonData.features.slice();
+    routes.sort(function (a, b) {
+      var nameA = (a.properties && (a.properties.route_long_name || a.properties.route_short_name)) || '';
+      var nameB = (b.properties && (b.properties.route_long_name || b.properties.route_short_name)) || '';
+      return nameA.localeCompare(nameB);
+    });
+
+    for (var i = 0; i < routes.length; i++) {
+      var route = routes[i];
+      var props = route.properties || {};
+      var displayName = props.route_long_name || props.route_short_name || route.id || 'Unknown';
+      var opt = document.createElement('option');
+      opt.value = route.id || i.toString();
+      opt.textContent = displayName;
+      lineSelect.appendChild(opt);
+    }
+  }
+
+  function renderStationSequence(routeId) {
+    stationListEl.innerHTML = '';
+    lineReportEmpty.hidden = true;
+
+    if (!routeId || !lineReportRoutesCache) return;
+
+    // Find the route feature
+    var routeFeature = null;
+    for (var i = 0; i < lineReportRoutesCache.features.length; i++) {
+      if (lineReportRoutesCache.features[i].id === routeId) {
+        routeFeature = lineReportRoutesCache.features[i];
+        break;
+      }
+    }
+
+    if (!routeFeature) return;
+
+    var sequence = (routeFeature.properties || {}).station_sequence;
+    if (!sequence || !Array.isArray(sequence) || sequence.length === 0) {
+      lineReportEmpty.hidden = false;
+      return;
+    }
+
+    for (var i = 0; i < sequence.length; i++) {
+      var station = sequence[i];
+      var li = document.createElement('li');
+      li.className = 'line-report__station-item';
+
+      var seqSpan = document.createElement('span');
+      seqSpan.className = 'line-report__station-seq';
+      seqSpan.textContent = (i + 1).toString();
+
+      var nameSpan = document.createElement('span');
+      nameSpan.className = 'line-report__station-name';
+      nameSpan.textContent = station.name || 'Unknown';
+
+      li.appendChild(seqSpan);
+      li.appendChild(nameSpan);
+
+      if (typeof station.child_count === 'number' && station.child_count > 0) {
+        var badge = document.createElement('span');
+        badge.className = 'line-report__station-badge';
+        badge.textContent = station.child_count + (station.child_count === 1 ? ' stop' : ' stops');
+        badge.setAttribute('aria-label', station.child_count + ' secondary stops');
+        li.appendChild(badge);
+      }
+
+      stationListEl.appendChild(li);
+    }
+  }
+
+  lineSelect.addEventListener('change', function () {
+    renderStationSequence(lineSelect.value);
+  });
+
+  // Fetch routes layer for the line report when layers are loaded
+  function fetchRoutesForLineReport() {
+    fetch(API_BASE + '/api/layers')
+      .then(function (response) {
+        if (!response.ok) return;
+        return response.json();
+      })
+      .then(function (layerNames) {
+        if (!layerNames) return;
+        // Find the first routes layer
+        var routesLayer = null;
+        for (var i = 0; i < layerNames.length; i++) {
+          if (/routes/i.test(layerNames[i])) {
+            routesLayer = layerNames[i];
+            break;
+          }
+        }
+        if (!routesLayer) return;
+        return fetch(API_BASE + '/api/layers/' + encodeURIComponent(routesLayer));
+      })
+      .then(function (response) {
+        if (!response || !response.ok) return;
+        return response.json();
+      })
+      .then(function (geojsonData) {
+        if (geojsonData) {
+          populateLineSelect(geojsonData);
+        }
+      })
+      .catch(function () {
+        // Silently fail — line report won't be populated
+      });
+  }
+
+  fetchRoutesForLineReport();
 
 })();
