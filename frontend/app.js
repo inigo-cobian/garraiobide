@@ -100,7 +100,7 @@
 
   function getRouteDisplayName(feature) {
     var props = feature.properties || {};
-    return props.route_long_name || props.route_short_name || feature.id || 'Unknown route';
+    return props.route_short_name + "  " + props.route_long_name || props.route_long_name || feature.id || 'Unknown route';
   }
 
   function getRouteId(feature) {
@@ -1088,8 +1088,7 @@
 
     for (var i = 0; i < routes.length; i++) {
       var route = routes[i];
-      var props = route.properties || {};
-      var displayName = props.route_long_name || props.route_short_name || route.id || 'Unknown';
+      var displayName = getRouteDisplayName(route);
       var opt = document.createElement('option');
       opt.value = route.id || i.toString();
       opt.textContent = displayName;
