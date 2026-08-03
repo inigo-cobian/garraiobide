@@ -2,7 +2,6 @@
 
 #include <algorithm>
 #include <cctype>
-#include <cstdint>
 #include <sstream>
 #include <string>
 #include <unordered_map>
@@ -367,6 +366,7 @@ build_station_sequences(const std::vector<CsvRow>& stops,
             const CsvRow& stop_row = *stop_it->second;
 
             // Determine the parent station id
+            std::string stop_id;
             std::string parent_id;
             std::string station_name;
 
@@ -374,14 +374,14 @@ build_station_sequences(const std::vector<CsvRow>& stops,
             bool is_parent = (lt_it != stop_row.end() && lt_it->second == "1");
 
             if (is_parent) {
-                parent_id = entry.stop_id;
+                stop_id = parent_id = entry.stop_id;
             } else {
                 auto ps_it = stop_row.find("parent_station");
                 if (ps_it != stop_row.end() && !ps_it->second.empty()) {
                     parent_id = ps_it->second;
                 } else {
                     // Standalone stop — treat itself as the parent
-                    parent_id = entry.stop_id;
+                    stop_id = parent_id = entry.stop_id;
                 }
             }
 
@@ -413,6 +413,7 @@ build_station_sequences(const std::vector<CsvRow>& stops,
             }
 
             nlohmann::json station_obj;
+            station_obj["id"] = stop_id;
             station_obj["name"] = station_name;
             station_obj["child_count"] = child_count;
             sequence_arr.push_back(station_obj);
