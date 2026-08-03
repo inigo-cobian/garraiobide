@@ -25,11 +25,11 @@ class GtfsIngestionAdapter final : public core::ports::DataIngestionPort {
 
    private:
     /// Read a file from a ZIP archive. Returns file contents or error.
-    [[nodiscard]] std::expected<std::string, core::ports::IngestionError>
+    [[nodiscard]] static std::expected<std::string, core::ports::IngestionError>
     read_zip_entry(const std::string& zip_path, const std::string& entry_name);
 
     /// Check if a ZIP archive contains a given entry.
-    [[nodiscard]] bool zip_contains(const std::string& zip_path,
+    [[nodiscard]] static bool zip_contains(const std::string& zip_path,
                                     const std::string& entry_name);
 };
 
