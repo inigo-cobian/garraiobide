@@ -701,7 +701,7 @@
           var mainOnly = {
             type: 'FeatureCollection',
             features: geojsonData.features.filter(function (f) {
-              return f.properties && f.properties.stop_type === 'parent_station';
+              return f.properties && f.properties.stop_type === 'parent_station' || f.properties.stop_type === 'standalone';
             })
           };
           layer = createGeoJsonLayer(mainOnly, {
@@ -796,7 +796,7 @@
     var parentIndex = {};
     for (var i = 0; i < geojsonData.features.length; i++) {
       var f = geojsonData.features[i];
-      if (f.properties && f.properties.stop_type === 'parent_station') {
+      if (f.properties && f.properties.stop_type === 'parent_station' || f.properties.stop_type === 'standalone') {
         parentIndex[f.id] = f.geometry.coordinates; // [lng, lat]
       }
     }
