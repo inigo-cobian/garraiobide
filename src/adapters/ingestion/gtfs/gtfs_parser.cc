@@ -6,6 +6,7 @@
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
+#include <iostream>
 
 #include <nlohmann/json.hpp>
 
@@ -370,20 +371,21 @@ build_station_sequences(const std::vector<CsvRow>& stops,
             std::string parent_id;
             std::string station_name;
 
-            auto lt_it = stop_row.find("location_type");
-            bool is_parent = (lt_it != stop_row.end() && lt_it->second == "1");
+            auto lt_it = stop_row.find("parent_station");
+            bool is_parent_or_standalone = lt_it != stop_row.end() && lt_it->second.empty();
 
-            if (is_parent) {
+            // TODO change, can be parent or standalone
+            if (is_parent_or_standalone) {
                 stop_id = parent_id = entry.stop_id;
             } else {
                 auto ps_it = stop_row.find("parent_station");
                 if (ps_it != stop_row.end() && !ps_it->second.empty()) {
                     parent_id = ps_it->second;
-                } else {
-                    // Standalone stop — treat itself as the parent
-                    stop_id = parent_id = entry.stop_id;
                 }
             }
+
+            // Skip if value is empty
+            if (stop_id.empty()) continue;
 
             // Skip if same parent as previous (avoid duplicates)
             if (parent_id == last_parent_id) continue;
@@ -482,7 +484,7 @@ core::domain::Layer build_route_layer(const GtfsFeed& feed,
 std::string normalize_agency_name(const std::string& name) {
     std::string result;
     result.reserve(name.size());
-    for (char c : name) {
+    for (const char c : name) {
         if (c == ' ') {
             result += '_';
         } else {
