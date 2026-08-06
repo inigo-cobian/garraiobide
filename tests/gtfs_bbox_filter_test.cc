@@ -16,6 +16,7 @@ using core::domain::Coordinate;
 using core::domain::GeoFeature;
 using core::domain::Geometry;
 using core::domain::LineString;
+using core::domain::MultiLineString;
 using core::domain::Point;
 
 // =============================================================================
@@ -43,6 +44,15 @@ bool feature_intersects_bbox(const GeoFeature& feature,
                 for (const auto& vertex : geom.vertices) {
                     if (bbox.contains(vertex)) {
                         return true;
+                    }
+                }
+                return false;
+            } else if constexpr (std::is_same_v<T, MultiLineString>) {
+                for (const auto& line : geom.lines) {
+                    for (const auto& coord : line) {
+                        if (bbox.contains(coord)) {
+                            return true;
+                        }
                     }
                 }
                 return false;

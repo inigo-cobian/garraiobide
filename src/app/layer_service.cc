@@ -111,7 +111,8 @@ LayerService::import_gtfs(const std::string& source,
     for (auto& feature : *features_result) {
         if (std::holds_alternative<core::domain::Point>(feature.geometry)) {
             stop_features.push_back(std::move(feature));
-        } else if (std::holds_alternative<core::domain::LineString>(feature.geometry)) {
+        } else if (std::holds_alternative<core::domain::LineString>(feature.geometry) ||
+                   std::holds_alternative<core::domain::MultiLineString>(feature.geometry)) {
             route_features.push_back(std::move(feature));
         }
     }

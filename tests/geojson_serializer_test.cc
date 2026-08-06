@@ -51,6 +51,38 @@ TEST(GeoJsonSerializerTest, LineStringSerializationProducesArrayOfLngLat) {
     EXPECT_DOUBLE_EQ(coords[1][1].get<double>(), 43.28);
 }
 
+// --- MultiLineString serialization ---
+
+TEST(GeoJsonSerializerTest, MultiLineStringSerializationProducesNestedArrays) {
+    MultiLineString mls{
+        {{{43.25, -2.95}, {43.28, -2.90}},
+         {{43.30, -2.85}, {43.32, -2.80}, {43.34, -2.75}}}};
+
+    GeoFeature feature{
+        .id = "mline1",
+        .geometry = mls,
+        .properties = {},
+    };
+
+    auto result = json::parse(GeoJsonSerializer::serialize_feature(feature));
+
+    EXPECT_EQ(result["geometry"]["type"], "MultiLineString");
+    auto coords = result["geometry"]["coordinates"];
+    ASSERT_EQ(coords.size(), 2u);
+    // First line
+    ASSERT_EQ(coords[0].size(), 2u);
+    EXPECT_DOUBLE_EQ(coords[0][0][0].get<double>(), -2.95);
+    EXPECT_DOUBLE_EQ(coords[0][0][1].get<double>(), 43.25);
+    EXPECT_DOUBLE_EQ(coords[0][1][0].get<double>(), -2.90);
+    EXPECT_DOUBLE_EQ(coords[0][1][1].get<double>(), 43.28);
+    // Second line
+    ASSERT_EQ(coords[1].size(), 3u);
+    EXPECT_DOUBLE_EQ(coords[1][0][0].get<double>(), -2.85);
+    EXPECT_DOUBLE_EQ(coords[1][0][1].get<double>(), 43.30);
+    EXPECT_DOUBLE_EQ(coords[1][2][0].get<double>(), -2.75);
+    EXPECT_DOUBLE_EQ(coords[1][2][1].get<double>(), 43.34);
+}
+
 // --- Polygon serialization ---
 
 TEST(GeoJsonSerializerTest, PolygonSerializationProducesNestedArrays) {

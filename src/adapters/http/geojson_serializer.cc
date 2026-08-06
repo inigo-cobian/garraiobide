@@ -30,6 +30,16 @@ json geometry_to_json(const Geometry& geometry) {
                     coords.push_back(coordinate_to_json(vertex));
                 }
                 return {{"type", "LineString"}, {"coordinates", coords}};
+            } else if constexpr (std::is_same_v<T, MultiLineString>) {
+                json all_lines = json::array();
+                for (const auto& line : geo.lines) {
+                    json line_coords = json::array();
+                    for (const auto& vertex : line) {
+                        line_coords.push_back(coordinate_to_json(vertex));
+                    }
+                    all_lines.push_back(line_coords);
+                }
+                return {{"type", "MultiLineString"}, {"coordinates", all_lines}};
             } else if constexpr (std::is_same_v<T, Polygon>) {
                 json rings = json::array();
                 for (const auto& ring : geo.rings) {
@@ -55,6 +65,16 @@ json property_value_to_json(const PropertyValue& value) {
 json properties_to_json(const Properties& properties) {
     json obj = json::object();
     for (const auto& [key, value] : properties) {
+        if (key == "route_ids" || key == "station_sequence") {
+            const auto* str_val = std::get_if<std::string>(&value);
+            if (str_val) {
+                auto parsed = json::parse(*str_val, nullptr, false);
+                if (!parsed.is_discarded() && parsed.is_array()) {
+                    obj[key] = parsed;
+                    continue;
+                }
+            }
+        }
         obj[key] = property_value_to_json(value);
     }
     return obj;

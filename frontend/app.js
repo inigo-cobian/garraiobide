@@ -15,7 +15,19 @@
 
   // State
   var activeLayers = {};         // { layerName: L.GeoJSON } — multiple layers on the map
+  var secondaryStopsLayers = {}; // { layerName: L.LayerGroup } — child stops + connector lines
+  var connectorLineLayers = {};  // { layerName: L.LayerGroup } — dashed lines only
+  var stopsGeoJsonCache = {};    // { layerName: raw GeoJSON } — cached for toggling secondary
+  var showSecondary = {};        // { layerName: bool }
   var queryResultsLayer = null;  // L.GeoJSON layer for spatial query results
+
+  // Route filtering state
+  var routesGeoJsonCache = {};   // { layerName: raw GeoJSON } — cached for route filtering
+  var routeVisibility = {};      // { layerName: { routeId: bool } } — per-route visibility
+  var routeSubLayers = {};       // { layerName: { routeId: L.GeoJSON } } — per-route map layers
+
+  // Unified layer display mode: 'both', 'lines', 'stops'
+  var unifiedDisplayMode = {};   // { groupKey: 'both'|'lines'|'stops' }
 
   // Notification System
   var notificationsEl = document.getElementById('notifications');
@@ -86,6 +98,96 @@
     return DEFAULT_ROUTE_COLOR;
   }
 
+  function getRouteDisplayName(feature) {
+    var props = feature.properties || {};
+    return props.route_short_name + "  " + props.route_long_name || props.route_long_name || feature.id || 'Unknown route';
+  }
+
+  function getRouteId(feature) {
+    return feature.id || (feature.properties && feature.properties.route_short_name) || getRouteDisplayName(feature);
+  }
+
+  function extractUniqueRoutes(geojsonData) {
+    var routeMap = {};
+    for (var i = 0; i < geojsonData.features.length; i++) {
+      var f = geojsonData.features[i];
+      var id = getRouteId(f);
+      if (!routeMap[id]) {
+        routeMap[id] = {
+          id: id,
+          displayName: getRouteDisplayName(f),
+          color: getRouteColor(f)
+        };
+      }
+    }
+    var routes = Object.keys(routeMap).map(function (k) { return routeMap[k]; });
+    routes.sort(function (a, b) { return a.displayName.localeCompare(b.displayName); });
+    return routes;
+  }
+
+  /**
+   * Determine if a stop feature should be visible given current route visibility.
+   * @param {Object} feature - GeoJSON feature with properties.route_ids
+   * @param {Object} routeVis - { routeId: boolean } visibility map
+   * @param {string} mode - 'both', 'lines', or 'stops'
+   * @returns {boolean} true if the stop should be shown
+   */
+  function isStopVisible(feature, routeVis, mode) {
+    // In Only Stops mode, all stops are visible
+    if (mode === 'stops') return true;
+
+    var props = feature.properties || {};
+    var routeIds = props.route_ids;
+
+    // No route_ids or empty array → always visible
+    if (!routeIds || !Array.isArray(routeIds) || routeIds.length === 0) {
+      return true;
+    }
+
+    // A stop is visible if at least one of its route_ids is visible
+    for (var i = 0; i < routeIds.length; i++) {
+      if (routeVis[routeIds[i]] !== false) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /**
+   * Rebuild the visible stops layer from stopsGeoJsonCache filtered through isStopVisible.
+   * Removes the current stops map layer, filters features, creates a new GeoJSON layer, adds to map.
+   * Also rebuilds the secondary stops layer if showSecondary is active for this layer.
+   * @param {string} stopsLayerName - The name of the stops layer to rebuild
+   * @param {string} groupKey - The group key for looking up display mode and route visibility
+   */
+  function rebuildStopsLayer(stopsLayerName, groupKey) {
+    var geojsonData = stopsGeoJsonCache[stopsLayerName];
+    if (!geojsonData || !activeLayers[stopsLayerName]) return;
+
+    var mode = unifiedDisplayMode[groupKey] || 'both';
+    var routesLayerName = groupKey + '_routes';
+    var routeVis = routeVisibility[routesLayerName] || {};
+
+    // Remove current stops layer
+    map.removeLayer(activeLayers[stopsLayerName]);
+
+    // Filter features — only parent_station stops, filtered by route visibility
+    var visibleFeatures = geojsonData.features.filter(function (f) {
+      if (f.properties && f.properties.stop_type !== 'parent_station') return false;
+      return isStopVisible(f, routeVis, mode);
+    });
+
+    var filtered = { type: 'FeatureCollection', features: visibleFeatures };
+    var layer = createGeoJsonLayer(filtered, { layerType: 'stops' });
+    layer.addTo(map);
+    activeLayers[stopsLayerName] = layer;
+
+    // Rebuild secondary stops if visible
+    if (showSecondary[stopsLayerName]) {
+      buildSecondaryStopsLayer(stopsLayerName);
+    }
+  }
+
   function getStopRadius(zoom, isMain) {
     // Scale radius with zoom: base sizes at zoom 13, grow/shrink from there
     var base = isMain ? 7 : 4;
@@ -122,9 +224,34 @@
         }
       });
     }
+    // Also resize secondary stop markers
+    var secNames = Object.keys(secondaryStopsLayers);
+    for (var i = 0; i < secNames.length; i++) {
+      secondaryStopsLayers[secNames[i]].eachLayer(function (layer) {
+        if (layer.setRadius) {
+          layer.setRadius(getStopRadius(zoom, false));
+        }
+      });
+    }
   }
 
-  map.on('zoomend', updateStopRadii);
+  map.on('zoomend', function () {
+    updateStopRadii();
+    updateConnectorVisibility();
+  });
+
+  function updateConnectorVisibility() {
+    var zoom = map.getZoom();
+    var names = Object.keys(connectorLineLayers);
+    for (var i = 0; i < names.length; i++) {
+      var lg = connectorLineLayers[names[i]];
+      if (zoom >= 15) {
+        if (!map.hasLayer(lg)) lg.addTo(map);
+      } else {
+        if (map.hasLayer(lg)) map.removeLayer(lg);
+      }
+    }
+  }
 
   function createGeoJsonLayer(geojsonData, options) {
     options = options || {};
@@ -204,14 +331,208 @@
       });
   }
 
+  // Group layer names into unified pairs (routes + stops with same prefix)
+  function groupLayerNames(layerNames) {
+    var groups = [];       // { key, label, routesLayer, stopsLayer }
+    var standalone = [];   // layer names that don't pair
+    var stopsMap = {};
+    var routesMap = {};
+
+    for (var i = 0; i < layerNames.length; i++) {
+      var name = layerNames[i];
+      if (isStopsLayer(name)) {
+        var prefix = name.replace(/_?stops$/i, '');
+        stopsMap[prefix] = name;
+      } else if (isRoutesLayer(name)) {
+        var prefix = name.replace(/_?routes$/i, '');
+        routesMap[prefix] = name;
+      }
+    }
+
+    var paired = {};
+    var prefixes = Object.keys(routesMap);
+    for (var i = 0; i < prefixes.length; i++) {
+      var p = prefixes[i];
+      if (stopsMap[p]) {
+        groups.push({
+          key: p,
+          label: p || 'Transit',
+          routesLayer: routesMap[p],
+          stopsLayer: stopsMap[p]
+        });
+        paired[routesMap[p]] = true;
+        paired[stopsMap[p]] = true;
+      }
+    }
+
+    for (var i = 0; i < layerNames.length; i++) {
+      if (!paired[layerNames[i]]) {
+        standalone.push(layerNames[i]);
+      }
+    }
+
+    return { groups: groups, standalone: standalone };
+  }
+
   function populateLayerList(layerNames) {
     layerListEl.innerHTML = '';
-    for (var i = 0; i < layerNames.length; i++) {
+    var grouped = groupLayerNames(layerNames);
+
+    // Render unified groups (routes + stops)
+    for (var g = 0; g < grouped.groups.length; g++) {
+      var group = grouped.groups[g];
+      var li = document.createElement('li');
+      li.className = 'layer-control__item';
+
+      // Main toggle for the unified group
+      var label = document.createElement('label');
+      label.className = 'layer-control__label';
+
+      var checkbox = document.createElement('input');
+      checkbox.type = 'checkbox';
+      checkbox.className = 'layer-control__checkbox';
+      checkbox.dataset.unifiedGroup = group.key;
+      checkbox.dataset.routesLayer = group.routesLayer;
+      checkbox.dataset.stopsLayer = group.stopsLayer;
+      checkbox.checked = !!(activeLayers[group.routesLayer] || activeLayers[group.stopsLayer]);
+      checkbox.setAttribute('aria-label', 'Toggle ' + group.label + ' lines and stops');
+      checkbox.addEventListener('change', onUnifiedGroupToggle);
+
+      var span = document.createElement('span');
+      span.className = 'layer-control__name';
+      span.textContent = group.label;
+
+      label.appendChild(checkbox);
+      label.appendChild(span);
+      li.appendChild(label);
+
+      // Display mode selector (Lines & Stops / Only Lines / Only Stops)
+      var modeContainer = document.createElement('div');
+      modeContainer.className = 'display-mode-selector';
+      modeContainer.dataset.groupKey = group.key;
+
+      var currentMode = unifiedDisplayMode[group.key] || 'both';
+      var modes = [
+        { value: 'both', label: 'Lines & Stops' },
+        { value: 'lines', label: 'Only Lines' },
+        { value: 'stops', label: 'Only Stops' }
+      ];
+
+      for (var m = 0; m < modes.length; m++) {
+        var modeLabel = document.createElement('label');
+        modeLabel.className = 'display-mode-selector__label';
+
+        var radio = document.createElement('input');
+        radio.type = 'radio';
+        radio.name = 'display-mode-' + group.key;
+        radio.className = 'display-mode-selector__radio';
+        radio.value = modes[m].value;
+        radio.checked = (modes[m].value === currentMode);
+        radio.dataset.groupKey = group.key;
+        radio.dataset.routesLayer = group.routesLayer;
+        radio.dataset.stopsLayer = group.stopsLayer;
+        radio.addEventListener('change', onDisplayModeChange);
+
+        var modeSpan = document.createElement('span');
+        modeSpan.className = 'display-mode-selector__text';
+        modeSpan.textContent = modes[m].label;
+
+        modeLabel.appendChild(radio);
+        modeLabel.appendChild(modeSpan);
+        modeContainer.appendChild(modeLabel);
+      }
+
+      li.appendChild(modeContainer);
+
+      // Secondary stops toggle (under the stops part of the group)
+      var subLabel = document.createElement('label');
+      subLabel.className = 'layer-control__label layer-control__label--sub';
+
+      var subCheckbox = document.createElement('input');
+      subCheckbox.type = 'checkbox';
+      subCheckbox.className = 'layer-control__checkbox';
+      subCheckbox.dataset.secondaryFor = group.stopsLayer;
+      subCheckbox.checked = !!showSecondary[group.stopsLayer];
+      subCheckbox.setAttribute('aria-label', 'Show secondary stops for ' + group.label);
+      subCheckbox.addEventListener('change', onSecondaryToggle);
+
+      var subSpan = document.createElement('span');
+      subSpan.className = 'layer-control__name layer-control__name--sub';
+      subSpan.textContent = 'Secondary stops';
+
+      subLabel.appendChild(subCheckbox);
+      subLabel.appendChild(subSpan);
+      li.appendChild(subLabel);
+
+      // Per-route filter list
+      var routeContainer = document.createElement('div');
+      routeContainer.className = 'route-filter-list';
+      routeContainer.id = 'route-filter-' + group.routesLayer;
+      li.appendChild(routeContainer);
+      if (routesGeoJsonCache[group.routesLayer]) {
+        buildRouteFilterItems(group.routesLayer, routeContainer);
+      }
+
+      layerListEl.appendChild(li);
+    }
+
+    // Render standalone layers (not paired)
+    for (var i = 0; i < grouped.standalone.length; i++) {
+      var name = grouped.standalone[i];
       var li = document.createElement('li');
       li.className = 'layer-control__item';
 
       var label = document.createElement('label');
       label.className = 'layer-control__label';
+
+      var checkbox = document.createElement('input');
+      checkbox.type = 'checkbox';
+      checkbox.className = 'layer-control__checkbox';
+      checkbox.dataset.layerName = name;
+      checkbox.checked = !!activeLayers[name];
+      checkbox.setAttribute('aria-label', 'Toggle layer ' + name);
+      checkbox.addEventListener('change', onLayerToggle);
+
+      var span = document.createElement('span');
+      span.className = 'layer-control__name';
+      span.textContent = name;
+
+      label.appendChild(checkbox);
+      label.appendChild(span);
+      li.appendChild(label);
+
+      // If it's a standalone stops layer, add secondary toggle
+      if (isStopsLayer(name)) {
+        var subLabel2 = document.createElement('label');
+        subLabel2.className = 'layer-control__label layer-control__label--sub';
+
+        var subCheckbox2 = document.createElement('input');
+        subCheckbox2.type = 'checkbox';
+        subCheckbox2.className = 'layer-control__checkbox';
+        subCheckbox2.dataset.secondaryFor = name;
+        subCheckbox2.checked = !!showSecondary[name];
+        subCheckbox2.setAttribute('aria-label', 'Show secondary stops for ' + name);
+        subCheckbox2.addEventListener('change', onSecondaryToggle);
+
+        var subSpan2 = document.createElement('span');
+        subSpan2.className = 'layer-control__name layer-control__name--sub';
+        subSpan2.textContent = 'Secondary stops';
+
+        subLabel2.appendChild(subCheckbox2);
+        subLabel2.appendChild(subSpan2);
+        li.appendChild(subLabel2);
+      }
+
+      // If it's a standalone routes layer, add route filter
+      if (isRoutesLayer(name)) {
+        var routeContainer = document.createElement('div');
+        routeContainer.className = 'route-filter-list';
+        routeContainer.id = 'route-filter-' + name;
+        li.appendChild(routeContainer);
+        if (routesGeoJsonCache[name]) {
+          buildRouteFilterItems(name, routeContainer);
+        }
+      }
 
       var checkbox = document.createElement('input');
       checkbox.type = 'checkbox';
@@ -230,6 +551,125 @@
       label.appendChild(span);
       li.appendChild(label);
       layerListEl.appendChild(li);
+    }
+  }
+
+  function buildRouteFilterItems(layerName, container) {
+    var geojsonData = routesGeoJsonCache[layerName];
+    if (!geojsonData) return;
+    var routes = extractUniqueRoutes(geojsonData);
+    container.innerHTML = '';
+    for (var i = 0; i < routes.length; i++) {
+      var route = routes[i];
+      var subLabel = document.createElement('label');
+      subLabel.className = 'layer-control__label layer-control__label--route';
+
+      var subCheckbox = document.createElement('input');
+      subCheckbox.type = 'checkbox';
+      subCheckbox.className = 'layer-control__checkbox';
+      subCheckbox.dataset.routeLayer = layerName;
+      subCheckbox.dataset.routeId = route.id;
+      subCheckbox.checked = !routeVisibility[layerName] || routeVisibility[layerName][route.id] !== false;
+      subCheckbox.setAttribute('aria-label', 'Toggle route ' + route.displayName);
+      subCheckbox.addEventListener('change', onRouteToggle);
+
+      var swatch = document.createElement('span');
+      swatch.className = 'route-color-swatch';
+      swatch.style.backgroundColor = route.color;
+
+      var nameSpan = document.createElement('span');
+      nameSpan.className = 'layer-control__name layer-control__name--route';
+      nameSpan.textContent = route.displayName;
+
+      subLabel.appendChild(subCheckbox);
+      subLabel.appendChild(swatch);
+      subLabel.appendChild(nameSpan);
+      container.appendChild(subLabel);
+    }
+  }
+
+  function onRouteToggle(e) {
+    var layerName = e.target.dataset.routeLayer;
+    var routeId = e.target.dataset.routeId;
+    if (!routeVisibility[layerName]) routeVisibility[layerName] = {};
+    routeVisibility[layerName][routeId] = e.target.checked;
+    if (e.target.checked) {
+      if (routeSubLayers[layerName] && routeSubLayers[layerName][routeId]) {
+        routeSubLayers[layerName][routeId].addTo(map);
+      }
+    } else {
+      if (routeSubLayers[layerName] && routeSubLayers[layerName][routeId]) {
+        map.removeLayer(routeSubLayers[layerName][routeId]);
+      }
+    }
+
+    // Rebuild the paired stops layer to reflect new route visibility
+    var groupKey = layerName.replace(/_?routes$/i, '');
+    var stopsLayerName = groupKey + '_stops';
+    rebuildStopsLayer(stopsLayerName, groupKey);
+  }
+
+  function onSecondaryToggle(e) {
+    var name = e.target.dataset.secondaryFor;
+    if (e.target.checked) {
+      showSecondary[name] = true;
+      if (stopsGeoJsonCache[name]) {
+        buildSecondaryStopsLayer(name);
+      }
+    } else {
+      showSecondary[name] = false;
+      removeSecondaryStopsLayer(name);
+    }
+  }
+
+  function onUnifiedGroupToggle(e) {
+    var groupKey = e.target.dataset.unifiedGroup;
+    var routesLayer = e.target.dataset.routesLayer;
+    var stopsLayer = e.target.dataset.stopsLayer;
+    var mode = unifiedDisplayMode[groupKey] || 'both';
+
+    if (e.target.checked) {
+      if (mode === 'both' || mode === 'lines') {
+        addLayer(routesLayer);
+      }
+      if (mode === 'both' || mode === 'stops') {
+        addLayer(stopsLayer);
+      }
+    } else {
+      removeLayer(routesLayer);
+      removeLayer(stopsLayer);
+    }
+  }
+
+  function onDisplayModeChange(e) {
+    var groupKey = e.target.dataset.groupKey;
+    var routesLayer = e.target.dataset.routesLayer;
+    var stopsLayer = e.target.dataset.stopsLayer;
+    var mode = e.target.value;
+
+    unifiedDisplayMode[groupKey] = mode;
+
+    // Only apply if the group is currently active
+    var isActive = !!(activeLayers[routesLayer] || activeLayers[stopsLayer]);
+    if (!isActive) return;
+
+    // Apply the new mode
+    if (mode === 'both') {
+      if (!activeLayers[routesLayer]) addLayer(routesLayer);
+      if (!activeLayers[stopsLayer]) addLayer(stopsLayer);
+    } else if (mode === 'lines') {
+      if (!activeLayers[routesLayer]) addLayer(routesLayer);
+      if (activeLayers[stopsLayer]) removeLayer(stopsLayer);
+    } else if (mode === 'stops') {
+      if (activeLayers[routesLayer]) removeLayer(routesLayer);
+      if (!activeLayers[stopsLayer]) addLayer(stopsLayer);
+    }
+
+    // Rebuild stops layer to apply or remove route-based filtering:
+    // - 'stops' mode: restores all stops (isStopVisible returns true for all)
+    // - 'both' mode: applies current route visibility filtering
+    if (mode === 'both' || mode === 'stops') {
+      rebuildStopsLayer(stopsLayer, groupKey);
     }
   }
 
@@ -270,25 +710,179 @@
           layerType = 'routes';
         }
 
-        var layer = createGeoJsonLayer(geojsonData, {
-          layerType: layerType,
-          style: DEFAULT_LAYER_STYLE
-        });
-        layer.addTo(map);
-        activeLayers[name] = layer;
+        var layer;
+        if (layerType === 'stops') {
+          // Cache full data, show only parent stations initially
+          stopsGeoJsonCache[name] = geojsonData;
+          var mainOnly = {
+            type: 'FeatureCollection',
+            features: geojsonData.features.filter(function (f) {
+              return f.properties && f.properties.stop_type === 'parent_station' || f.properties.stop_type === 'standalone';
+            })
+          };
+          layer = createGeoJsonLayer(mainOnly, {
+            layerType: 'stops',
+            style: DEFAULT_LAYER_STYLE
+          });
+          layer.addTo(map);
+          activeLayers[name] = layer;
 
-        // Fit bounds (Req 6.5)
-        var bounds = layer.getBounds();
-        if (bounds.isValid()) {
-          map.fitBounds(bounds, { padding: [30, 30] });
+          // If secondary was already toggled on, rebuild it
+          if (showSecondary[name]) {
+            buildSecondaryStopsLayer(name);
+          }
+        } else if (layerType === 'routes') {
+          // Split into per-route sub-layers for individual visibility control
+          routesGeoJsonCache[name] = geojsonData;
+          if (!routeVisibility[name]) routeVisibility[name] = {};
+          routeSubLayers[name] = {};
+
+          var routeFeatures = {};
+          for (var k = 0; k < geojsonData.features.length; k++) {
+            var feat = geojsonData.features[k];
+            var rId = getRouteId(feat);
+            if (!routeFeatures[rId]) routeFeatures[rId] = [];
+            routeFeatures[rId].push(feat);
+          }
+
+          var allBounds = null;
+          var rIds = Object.keys(routeFeatures);
+          for (var j = 0; j < rIds.length; j++) {
+            var id = rIds[j];
+            var fc = { type: 'FeatureCollection', features: routeFeatures[id] };
+            var sub = createGeoJsonLayer(fc, { layerType: 'routes', style: DEFAULT_LAYER_STYLE });
+            if (routeVisibility[name][id] !== false) {
+              sub.addTo(map);
+              if (routeVisibility[name][id] === undefined) routeVisibility[name][id] = true;
+            }
+            routeSubLayers[name][id] = sub;
+            var b = sub.getBounds();
+            if (b.isValid()) allBounds = allBounds ? allBounds.extend(b) : b;
+          }
+
+          // Placeholder so the main checkbox considers the layer active
+          activeLayers[name] = L.layerGroup().addTo(map);
+
+          // Populate route filter checkboxes
+          var container = document.getElementById('route-filter-' + name);
+          if (container) buildRouteFilterItems(name, container);
+
+          if (allBounds) map.fitBounds(allBounds, { padding: [30, 30] });
+        } else {
+          layer = createGeoJsonLayer(geojsonData, {
+            layerType: layerType,
+            style: DEFAULT_LAYER_STYLE
+          });
+          layer.addTo(map);
+          activeLayers[name] = layer;
+        }
+
+        // Fit bounds (routes handled above)
+        if (layerType !== 'routes' && activeLayers[name] && activeLayers[name].getBounds) {
+          var bounds = activeLayers[name].getBounds();
+          if (bounds.isValid()) {
+            map.fitBounds(bounds, { padding: [30, 30] });
+          }
         }
       })
       .catch(function (err) {
         showNotification('Error loading layer: ' + err.message, 'error');
-        // Uncheck the checkbox on failure
         var cb = layerListEl.querySelector('input[data-layer-name="' + name + '"]');
         if (cb) cb.checked = false;
       });
+  }
+
+  function buildSecondaryStopsLayer(name) {
+    var geojsonData = stopsGeoJsonCache[name];
+    if (!geojsonData) return;
+
+    // Remove existing secondary layer
+    if (secondaryStopsLayers[name]) {
+      map.removeLayer(secondaryStopsLayers[name]);
+      delete secondaryStopsLayers[name];
+    }
+
+    // Determine mode and route visibility for filtering child stops
+    var groupKey = name.replace(/_?stops$/i, '');
+    var mode = unifiedDisplayMode[groupKey] || 'both';
+    var routesLayerName = groupKey + '_routes';
+    var routeVis = routeVisibility[routesLayerName] || {};
+
+    // Index parent stations by id
+    var parentIndex = {};
+    for (var i = 0; i < geojsonData.features.length; i++) {
+      var f = geojsonData.features[i];
+      if (f.properties && f.properties.stop_type === 'parent_station' || f.properties.stop_type === 'standalone') {
+        parentIndex[f.id] = f.geometry.coordinates; // [lng, lat]
+      }
+    }
+
+    var group = L.layerGroup();
+    var lines = L.layerGroup();
+    var zoom = map.getZoom();
+
+    for (var i = 0; i < geojsonData.features.length; i++) {
+      var f = geojsonData.features[i];
+      if (!f.properties || f.properties.stop_type !== 'child_stop') continue;
+
+      // Apply route visibility filter — skip child stops not visible
+      if (!isStopVisible(f, routeVis, mode)) continue;
+
+      var childCoords = f.geometry.coordinates; // [lng, lat]
+      var parentId = f.properties.parent_station;
+      var parentCoords = parentIndex[parentId];
+      var childLatLng = L.latLng(childCoords[1], childCoords[0]);
+
+      // Skip child entirely if within 20m of parent — avoids overlapping markers
+      if (parentCoords) {
+        var parentLatLng = L.latLng(parentCoords[1], parentCoords[0]);
+        if (parentLatLng.distanceTo(childLatLng) < 20) continue;
+      }
+
+      // Draw the child stop marker
+      var style = getStopStyle(f, zoom);
+      var marker = L.circleMarker(childLatLng, style);
+      marker.feature = f;
+      marker.on('click', function (e) {
+        L.DomEvent.stopPropagation(e);
+        L.popup()
+          .setLatLng(e.latlng)
+          .setContent(buildPopupContent(this.feature))
+          .openOn(map);
+      });
+      group.addLayer(marker);
+
+      // Draw dashed connector line to parent
+      if (parentCoords) {
+        var line = L.polyline([childLatLng, parentLatLng], {
+          color: '#000',
+          weight: 2,
+          opacity: 0.9,
+          dashArray: '4 4'
+        });
+        lines.addLayer(line);
+      }
+    }
+
+    group.addTo(map);
+    secondaryStopsLayers[name] = group;
+
+    // Lines shown only at zoom >= 15
+    connectorLineLayers[name] = lines;
+    if (map.getZoom() >= 15) {
+      lines.addTo(map);
+    }
+  }
+
+  function removeSecondaryStopsLayer(name) {
+    if (secondaryStopsLayers[name]) {
+      map.removeLayer(secondaryStopsLayers[name]);
+      delete secondaryStopsLayers[name];
+    }
+    if (connectorLineLayers[name]) {
+      map.removeLayer(connectorLineLayers[name]);
+      delete connectorLineLayers[name];
+    }
   }
 
   function removeLayer(name) {
@@ -296,6 +890,21 @@
       map.removeLayer(activeLayers[name]);
       delete activeLayers[name];
     }
+    removeSecondaryStopsLayer(name);
+    delete stopsGeoJsonCache[name];
+
+    // Clean up per-route sub-layers
+    if (routeSubLayers[name]) {
+      var rIds = Object.keys(routeSubLayers[name]);
+      for (var i = 0; i < rIds.length; i++) {
+        if (map.hasLayer(routeSubLayers[name][rIds[i]])) {
+          map.removeLayer(routeSubLayers[name][rIds[i]]);
+        }
+      }
+      delete routeSubLayers[name];
+    }
+    delete routesGeoJsonCache[name];
+    delete routeVisibility[name];
   }
 
   // Leaflet.draw Rectangle Control
@@ -450,6 +1059,7 @@
       if (result.status === 200) {
         showNotification('GTFS import complete', 'success');
         refreshLayerList();
+        fetchRoutesForLineReport();
       } else {
         showNotification(result.body.error || 'Upload failed', 'error');
       }
@@ -467,5 +1077,130 @@
 
   // Initialize on Load
   fetchLayers();
+
+  // -------------------------------------------------------------------------
+  // Line Report
+  // -------------------------------------------------------------------------
+  var lineSelect = document.getElementById('line-select');
+  var stationListEl = document.getElementById('station-list');
+  var lineReportEmpty = document.getElementById('line-report-empty');
+
+  // Cache of routes GeoJSON per layer for the line report
+  var lineReportRoutesCache = null; // { features: [...] }
+
+  function populateLineSelect(geojsonData) {
+    lineReportRoutesCache = geojsonData;
+    lineSelect.innerHTML = '<option value="">-- Choose a line --</option>';
+
+    if (!geojsonData || !geojsonData.features) return;
+
+    // Sort routes by display name
+    var routes = geojsonData.features.slice();
+    routes.sort(function (a, b) {
+      var nameA = (a.properties && (a.properties.route_long_name || a.properties.route_short_name)) || '';
+      var nameB = (b.properties && (b.properties.route_long_name || b.properties.route_short_name)) || '';
+      return nameA.localeCompare(nameB);
+    });
+
+    for (var i = 0; i < routes.length; i++) {
+      var route = routes[i];
+      var displayName = getRouteDisplayName(route);
+      var opt = document.createElement('option');
+      opt.value = route.id || i.toString();
+      opt.textContent = displayName;
+      lineSelect.appendChild(opt);
+    }
+  }
+
+  function renderStationSequence(routeId) {
+    stationListEl.innerHTML = '';
+    lineReportEmpty.hidden = true;
+
+    if (!routeId || !lineReportRoutesCache) return;
+
+    // Find the route feature
+    var routeFeature = null;
+    for (var i = 0; i < lineReportRoutesCache.features.length; i++) {
+      if (lineReportRoutesCache.features[i].id === routeId) {
+        routeFeature = lineReportRoutesCache.features[i];
+        break;
+      }
+    }
+
+    if (!routeFeature) return;
+
+    var sequence = (routeFeature.properties || {}).station_sequence;
+    if (!sequence || !Array.isArray(sequence) || sequence.length === 0) {
+      lineReportEmpty.hidden = false;
+      return;
+    }
+
+    for (var i = 0; i < sequence.length; i++) {
+      var station = sequence[i];
+      var li = document.createElement('li');
+      li.className = 'line-report__station-item';
+
+      var seqSpan = document.createElement('span');
+      seqSpan.className = 'line-report__station-seq';
+      seqSpan.textContent = (i + 1).toString();
+
+      var nameSpan = document.createElement('span');
+      nameSpan.className = 'line-report__station-name';
+      nameSpan.textContent = station.name || 'Unknown';
+
+      li.appendChild(seqSpan);
+      li.appendChild(nameSpan);
+
+      if (typeof station.child_count === 'number' && station.child_count > 0) {
+        var badge = document.createElement('span');
+        badge.className = 'line-report__station-badge';
+        badge.textContent = station.child_count + (station.child_count === 1 ? ' stop' : ' stops');
+        badge.setAttribute('aria-label', station.child_count + ' secondary stops');
+        li.appendChild(badge);
+      }
+
+      stationListEl.appendChild(li);
+    }
+  }
+
+  lineSelect.addEventListener('change', function () {
+    renderStationSequence(lineSelect.value);
+  });
+
+  // Fetch routes layer for the line report when layers are loaded
+  function fetchRoutesForLineReport() {
+    fetch(API_BASE + '/api/layers')
+      .then(function (response) {
+        if (!response.ok) return;
+        return response.json();
+      })
+      .then(function (layerNames) {
+        if (!layerNames) return;
+        // Find the first routes layer
+        var routesLayer = null;
+        for (var i = 0; i < layerNames.length; i++) {
+          if (/routes/i.test(layerNames[i])) {
+            routesLayer = layerNames[i];
+            break;
+          }
+        }
+        if (!routesLayer) return;
+        return fetch(API_BASE + '/api/layers/' + encodeURIComponent(routesLayer));
+      })
+      .then(function (response) {
+        if (!response || !response.ok) return;
+        return response.json();
+      })
+      .then(function (geojsonData) {
+        if (geojsonData) {
+          populateLineSelect(geojsonData);
+        }
+      })
+      .catch(function () {
+        // Silently fail — line report won't be populated
+      });
+  }
+
+  fetchRoutesForLineReport();
 
 })();

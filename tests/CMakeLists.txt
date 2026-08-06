@@ -13,6 +13,7 @@ add_executable(garraiobide_tests
         gtfs_csv_parser_test.cc
         gtfs_ingest_integration_test.cc
         gtfs_metadata_test.cc
+        gtfs_metro_bilbao_shapes_test.cc
         gtfs_persistence_roundtrip_test.cc
         gtfs_route_geometry_test.cc
         gtfs_stop_classification_test.cc
@@ -28,6 +29,10 @@ add_executable(garraiobide_tests
 )
 
 target_include_directories(garraiobide_tests PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+
+target_compile_definitions(garraiobide_tests PRIVATE
+        TEST_FIXTURES_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures"
+)
 
 target_link_libraries(garraiobide_tests
         PRIVATE

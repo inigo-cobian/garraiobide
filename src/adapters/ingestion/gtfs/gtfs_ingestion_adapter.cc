@@ -41,8 +41,7 @@ GtfsIngestionAdapter::load_features(const std::string& source) {
     // Read optional shapes.txt
     std::string shapes_csv_content;
     if (zip_contains(source, "shapes.txt")) {
-        auto shapes_csv = read_zip_entry(source, "shapes.txt");
-        if (shapes_csv) {
+        if (auto shapes_csv = read_zip_entry(source, "shapes.txt")) {
             shapes_csv_content = std::move(*shapes_csv);
         }
     }
@@ -111,7 +110,7 @@ GtfsIngestionAdapter::read_zip_entry(const std::string& zip_path,
     }
 
     std::string contents(stat.size, '\0');
-    zip_int64_t bytes_read = zip_fread(file, contents.data(), stat.size);
+    const zip_int64_t bytes_read = zip_fread(file, contents.data(), stat.size);
     zip_fclose(file);
     zip_close(archive);
 
@@ -130,7 +129,7 @@ bool GtfsIngestionAdapter::zip_contains(const std::string& zip_path,
         return false;
     }
 
-    zip_int64_t index = zip_name_locate(archive, entry_name.c_str(), 0);
+    const zip_int64_t index = zip_name_locate(archive, entry_name.c_str(), 0);
     zip_close(archive);
     return index >= 0;
 }

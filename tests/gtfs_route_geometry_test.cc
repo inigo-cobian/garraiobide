@@ -146,7 +146,7 @@ TEST(GtfsRouteGeometryTest, NoShapes_FallbackToStopSequence) {
 // ---------------------------------------------------------------------------
 
 TEST(GtfsRouteGeometryTest, MultipleTripsDifferentLengths_LongestSelected) {
-    // T1 has 2 shape points, T2 has 4 shape points → T2 should be selected
+    // T1 has 2 shape points, T2 has 4 shape points → both shapes combined
     auto feed = make_route_feed(
         // trips
         {{{"trip_id", "T1"}, {"route_id", "R1"}, {"shape_id", "SH_SHORT"}},
@@ -174,15 +174,19 @@ TEST(GtfsRouteGeometryTest, MultipleTripsDifferentLengths_LongestSelected) {
     ASSERT_EQ(routes.size(), 1u);
 
     const auto& geom = routes[0].geometry;
-    ASSERT_TRUE(std::holds_alternative<core::domain::LineString>(geom));
-    const auto& line = std::get<core::domain::LineString>(geom);
+    // Two distinct shapes → MultiLineString
+    ASSERT_TRUE(std::holds_alternative<core::domain::MultiLineString>(geom));
+    const auto& mls = std::get<core::domain::MultiLineString>(geom);
 
-    // The longest trip (SH_LONG) has 4 points
-    ASSERT_EQ(line.vertices.size(), 4u);
+    ASSERT_EQ(mls.lines.size(), 2u);
+    // SH_SHORT has 2 points
+    EXPECT_EQ(mls.lines[0].size(), 2u);
+    // SH_LONG has 4 points
+    EXPECT_EQ(mls.lines[1].size(), 4u);
 
-    // Verify it's the SH_LONG shape (last point is 43.29, -2.90)
-    EXPECT_DOUBLE_EQ(line.vertices[3].latitude, 43.29);
-    EXPECT_DOUBLE_EQ(line.vertices[3].longitude, -2.90);
+    // Verify the last point of SH_LONG
+    EXPECT_DOUBLE_EQ(mls.lines[1][3].latitude, 43.29);
+    EXPECT_DOUBLE_EQ(mls.lines[1][3].longitude, -2.90);
 }
 
 // ---------------------------------------------------------------------------
