@@ -70,6 +70,7 @@ conaninfo.txt
 graph_info.json
 .conanrunner/
 .conanrc
+conan_provider.cmake
 
 # Temporary files
 *.tmp

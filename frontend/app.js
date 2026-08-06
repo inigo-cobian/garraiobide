@@ -534,6 +534,22 @@
         }
       }
 
+      var checkbox = document.createElement('input');
+      checkbox.type = 'checkbox';
+      checkbox.className = 'layer-control__checkbox';
+      checkbox.dataset.layerName = layerNames[i];
+      checkbox.checked = !!activeLayers[layerNames[i]];
+      checkbox.setAttribute('aria-label', 'Toggle layer ' + layerNames[i]);
+
+      checkbox.addEventListener('change', onLayerToggle);
+
+      var span = document.createElement('span');
+      span.className = 'layer-control__name';
+      span.textContent = layerNames[i];
+
+      label.appendChild(checkbox);
+      label.appendChild(span);
+      li.appendChild(label);
       layerListEl.appendChild(li);
     }
   }
