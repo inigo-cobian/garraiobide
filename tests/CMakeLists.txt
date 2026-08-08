@@ -3,6 +3,7 @@ include(GoogleTest)
 
 add_executable(garraiobide_tests
         domain_test.cc
+        entity_conversion_test.cc
         e2e_coordinate_consistency_test.cc
         file_persistence_property_test.cc
         file_persistence_test.cc
@@ -11,6 +12,7 @@ add_executable(garraiobide_tests
         gtfs_agency_name_test.cc
         gtfs_bbox_filter_test.cc
         gtfs_csv_parser_test.cc
+        gtfs_entity_parser_test.cc
         gtfs_ingest_integration_test.cc
         gtfs_metadata_test.cc
         gtfs_metro_bilbao_shapes_test.cc
@@ -24,6 +26,9 @@ add_executable(garraiobide_tests
         mongo_persistence_integration_test.cc
         mongo_persistence_property_test.cc
         parse_args_test.cc
+        postgis_transit_repository_test.cc
+        postgis_persistence_adapter_test.cc
+        transit_repository_test.cc
         mocks/mock_ingestion_adapter.cc
         mocks/mock_persistence_adapter.cc
 )

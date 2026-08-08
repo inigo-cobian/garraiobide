@@ -3,12 +3,16 @@ add_library(garraiobide_src
         adapters/http/geojson_serializer.cc
         adapters/http/http_adapter.cc
         adapters/ingestion/gtfs/gtfs_parser.cc
+        adapters/ingestion/gtfs/gtfs_entity_parser.cc
         adapters/ingestion/gtfs/gtfs_ingestion_adapter.cc
         adapters/persistence/file_persistence_adapter.cc
         adapters/persistence/mongo_persistence_adapter.cc
+        adapters/persistence/postgis_persistence_adapter.cc
+        adapters/persistence/postgis_transit_repository.cc
         adapters/ui/mock_presentation_adapter.cc
         app/layer_service.cc
         app/parse_args.cc
+        core/domain/entity_conversion.cc
         core/domain/layer.cc
 )
 
@@ -19,6 +23,7 @@ find_package(nlohmann_json REQUIRED)
 find_package(httplib REQUIRED)
 find_package(args REQUIRED)
 find_package(mongocxx REQUIRED)
+find_package(libpqxx REQUIRED)
 
 target_link_libraries(garraiobide_src
         PUBLIC
@@ -28,7 +33,14 @@ target_link_libraries(garraiobide_src
         httplib::httplib
         mongo::mongocxx_static
         mongo::bsoncxx_static
+        libpqxx::pqxx
 )
 
 add_executable(garraiobide_app server/main.cc)
 target_link_libraries(garraiobide_app PRIVATE garraiobide_src)
+
+add_executable(gtfs_ingest tools/gtfs_ingest/main.cc)
+target_link_libraries(gtfs_ingest PRIVATE garraiobide_src)
+
+add_executable(sync_mongo tools/sync_mongo/main.cc)
+target_link_libraries(sync_mongo PRIVATE garraiobide_src)

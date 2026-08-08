@@ -28,6 +28,30 @@ services:
       POSTGRES_DB: garraiobide
     volumes:
       - postgis_data:/var/lib/postgresql/data
+      - ../db/migrations:/docker-entrypoint-initdb.d:ro
+    secrets:
+      - postgres_user
+      - postgres_password
+    networks:
+      - db_network
+
+  admin:
+    build:
+      context: ../admin
+      dockerfile: Dockerfile
+    container_name: transit_admin
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      POSTGRES_HOST: postgis
+      POSTGRES_PORT: "5432"
+      POSTGRES_DB: garraiobide
+      POSTGRES_USER_FILE: /run/secrets/postgres_user
+      POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
+      DJANGO_DEBUG: "True"
+    depends_on:
+      - postgis
     secrets:
       - postgres_user
       - postgres_password
